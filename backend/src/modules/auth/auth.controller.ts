@@ -3,7 +3,8 @@ import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 import { env } from '../../config/env';
-import { addressSchema, registerSchema, loginSchema } from './auth.schemas';
+import { sendActivationEmail } from '../../config/mailer';
+import { addressSchema, activateSchema, registerSchema, loginSchema } from './auth.schemas';
 import {
   addDays,
   addHours,
@@ -94,6 +95,35 @@ async function revokeRefreshFamily(family: string, reason: string, now: Date) {
   });
 }
 
+async function activateAccount(token: string) {
+  const normalizedToken = token.trim();
+
+  if (!normalizedToken) {
+    return { status: 400, message: 'Token inválido ou expirado' };
+  }
+
+  const user = await prisma.user.findUnique({ where: { activationToken: normalizedToken } });
+  if (!user) {
+    return { status: 400, message: 'Token inválido ou expirado' };
+  }
+
+  if (!user.activationTokenExpiresAt || user.activationTokenExpiresAt <= new Date()) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { activationToken: null, activationTokenExpiresAt: null },
+    });
+
+    return { status: 400, message: 'Token inválido ou expirado' };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { isActive: true, activationToken: null, activationTokenExpiresAt: null },
+  });
+
+  return { status: 200, message: 'Conta ativada com sucesso. Você já pode fazer login.' };
+}
+
 // POST /auth/register
 export async function register(req: Request, res: Response) {
   const parsed = registerSchema.safeParse(req.body);
@@ -122,12 +152,26 @@ export async function register(req: Request, res: Response) {
     select: { id: true, name: true, email: true, role: true, isActive: true },
   });
 
-  // “envio de e-mail” simulado
-  const activationUrl = `http://localhost:${env.port}/auth/activate/${activationToken}`;
-  console.log('📧 Ativação simulada:', activationUrl);
+  const activationUrl = `${env.frontendUrl || 'http://localhost:3001'}/register?token=${encodeURIComponent(activationToken)}`;
+
+  try {
+    await sendActivationEmail({
+      to: user.email,
+      name: user.name,
+      token: activationToken,
+      activationUrl,
+    });
+  } catch (error) {
+    console.error('Erro ao enviar e-mail de ativação', error);
+    await prisma.user.delete({ where: { id: user.id } });
+
+    return res.status(502).json({
+      message: 'Não foi possível enviar o e-mail de ativação. Tente novamente.',
+    });
+  }
 
   return res.status(201).json({
-    message: 'Usuário registrado. Verifique o link de ativação no console.',
+    message: 'Usuário registrado. Verifique seu e-mail para validar a conta com o token recebido.',
     user: toPublicUser(user),
   });
 }
@@ -149,7 +193,11 @@ export async function login(req: Request, res: Response) {
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(401).json({ message: 'Credenciais inválidas' });
 
-  if (!user.isActive) return res.status(403).json({ message: 'Conta não ativada' });
+  if (!user.isActive) {
+    return res.status(403).json({
+      message: 'Conta não ativada. Verifique seu e-mail e valide o token antes de entrar.',
+    });
+  }
 
   const accessToken = signAccessToken(user.id, user.role);
   const refreshToken = createOpaqueToken();
@@ -285,25 +333,20 @@ export async function logout(req: Request, res: Response) {
 
 // GET /auth/activate/:token
 export async function activate(req: Request, res: Response) {
-  const token = String(req.params.token || '');
+  const result = await activateAccount(String(req.params.token || ''));
+  return res.status(result.status).json({ message: result.message });
+}
 
-  const user = await prisma.user.findUnique({ where: { activationToken: token } });
-  if (!user) return res.status(400).json({ message: 'Token inválido ou expirado' });
+// POST /auth/activate
+export async function activateByToken(req: Request, res: Response) {
+  const parsed = activateSchema.safeParse(req.body);
 
-  if (!user.activationTokenExpiresAt || user.activationTokenExpiresAt <= new Date()) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { activationToken: null, activationTokenExpiresAt: null },
-    });
-    return res.status(400).json({ message: 'Token inválido ou expirado' });
+  if (!parsed.success) {
+    return res.status(400).json({ message: 'Dados inválidos', errors: parsed.error.flatten() });
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { isActive: true, activationToken: null, activationTokenExpiresAt: null },
-  });
-
-  return res.json({ message: 'Conta ativada com sucesso. Você já pode fazer login.' });
+  const result = await activateAccount(parsed.data.token);
+  return res.status(result.status).json({ message: result.message });
 }
 
 // POST /auth/addresses

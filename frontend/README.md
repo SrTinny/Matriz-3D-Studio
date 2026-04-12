@@ -18,6 +18,7 @@ Aplicação cliente em Next.js (App Router) consumindo a API do backend.
 - Hidratação do usuário atual via `GET /auth/me`.
 - Refresh automático de sessão no interceptor do Axios.
 - Envio automático de `X-CSRF-Token` para métodos não idempotentes.
+- Cadastro exige validação do token enviado por e-mail antes do login.
 
 ## Header e navegação
 - Header exibe o endereço selecionado do usuário.

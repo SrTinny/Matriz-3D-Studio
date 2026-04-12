@@ -11,6 +11,9 @@ import MainContent from './_components/MainContent';
 export const metadata: Metadata = {
   title: 'Matriz 3D Studio',
   description: 'Loja de objetos 3D, assets e coleções para projetos, cenas e impressão.',
+  icons: {
+    icon: '/icon',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

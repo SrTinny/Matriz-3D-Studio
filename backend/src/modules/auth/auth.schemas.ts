@@ -11,6 +11,10 @@ export const loginSchema = z.object({
   password: z.string().min(6),
 });
 
+export const activateSchema = z.object({
+  token: z.string().trim().min(32),
+});
+
 export const addressSchema = z.object({
   label: z.string().trim().min(2).max(40),
   zipCode: z.string().trim().regex(/^\d{5}-?\d{3}$/),

@@ -54,7 +54,11 @@ export default function LoginPage() {
     } catch (e: unknown) {
       let msg = "Erro ao logar";
       if (axios.isAxiosError(e)) {
-        msg = e.response?.data?.message ?? e.message ?? msg;
+        if (e.response?.status === 403) {
+          msg = e.response?.data?.message ?? 'Conta não ativada. Verifique o token enviado por e-mail.';
+        } else {
+          msg = e.response?.data?.message ?? e.message ?? msg;
+        }
       } else if (e instanceof Error) {
         msg = e.message;
       }

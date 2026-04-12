@@ -11,6 +11,11 @@ function readRequiredString(name: string): string {
   return value;
 }
 
+function readOptionalString(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
 function readPositiveInt(name: string, defaultValue: number): number {
   const raw = process.env[name]?.trim();
   if (!raw) return defaultValue;
@@ -58,4 +63,11 @@ export const env = {
   authCookieSecure,
   authCookieSameSite: readSameSite(process.env.AUTH_COOKIE_SAME_SITE, defaultSameSite),
   authCookieDomain: process.env.AUTH_COOKIE_DOMAIN?.trim() || undefined,
+  smtpHost: readOptionalString('SMTP_HOST') || 'smtp.gmail.com',
+  smtpPort: readPositiveInt('SMTP_PORT', 587),
+  smtpSecure: readBoolean('SMTP_SECURE', false),
+  smtpUser: readRequiredString('SMTP_USER'),
+  smtpPass: readRequiredString('SMTP_PASS'),
+  smtpFrom: readOptionalString('SMTP_FROM'),
+  smtpFromName: readOptionalString('SMTP_FROM_NAME') || 'Matriz 3D Studio',
 };

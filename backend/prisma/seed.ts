@@ -1,4 +1,5 @@
 // prisma/seed.ts
+import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
 
@@ -13,14 +14,21 @@ function slugify(s: string) {
 }
 
 async function main() {
+  const adminEmail = process.env.ADMIN_SEED_EMAIL?.trim()
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD?.trim()
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error('Missing ADMIN_SEED_EMAIL or ADMIN_SEED_PASSWORD in environment')
+  }
+
   // --- Admin ---
-  const passwordHash = await bcrypt.hash('admin123', 10)
+  const passwordHash = await bcrypt.hash(adminPassword, 10)
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@matriz3dstudio.local' },
+    where: { email: adminEmail },
     update: {},
     create: {
       name: 'Admin',
-      email: 'admin@matriz3dstudio.local',
+      email: adminEmail,
       password: passwordHash,
       role: 'ADMIN',
       isActive: true,

@@ -44,6 +44,7 @@ router.post('/login', loginLimiter, c.login);
 router.post('/refresh', refreshLimiter, csrfProtection, c.refreshSession);
 router.post('/logout', csrfProtection, c.logout);
 router.get('/me', authMiddleware, c.me);
+router.post('/activate', activationLimiter, c.activateByToken);
 router.post('/addresses', authMiddleware, csrfProtection, c.createAddress);
 router.put('/addresses/:id', authMiddleware, csrfProtection, c.updateAddress);
 router.post('/addresses/:id/select', authMiddleware, csrfProtection, c.selectAddress);

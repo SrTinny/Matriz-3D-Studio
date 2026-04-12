@@ -49,7 +49,7 @@ function isUnsafeMethod(method?: string) {
 
 function isPublicAuthRequest(url?: string) {
   const path = getRequestPath(url);
-  return path === "/auth/login" || path === "/auth/register" || path.startsWith("/auth/activate/");
+  return path === "/auth/login" || path === "/auth/register" || path === "/auth/activate" || path.startsWith("/auth/activate/");
 }
 
 function shouldSkipRefresh(url?: string) {

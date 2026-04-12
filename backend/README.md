@@ -18,6 +18,7 @@ API em Node.js + TypeScript com Express e Prisma/PostgreSQL para uso local.
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /auth/me`
+- `POST /auth/activate`
 - `GET /auth/activate/:token`
 
 ## Endereços de cliente
@@ -66,6 +67,15 @@ npx prisma db seed
 - `AUTH_COOKIE_SECURE`
 - `AUTH_COOKIE_SAME_SITE`
 - `AUTH_COOKIE_DOMAIN`
+- `SMTP_HOST` (default `smtp.gmail.com`)
+- `SMTP_PORT` (default `587`)
+- `SMTP_SECURE` (default `false`)
+- `SMTP_USER` (obrigatória)
+- `SMTP_PASS` (obrigatória)
+- `SMTP_FROM` (opcional, default igual a `SMTP_USER`)
+- `SMTP_FROM_NAME` (default `Matriz 3D Studio`)
+- `ADMIN_SEED_EMAIL` (obrigatória para seed)
+- `ADMIN_SEED_PASSWORD` (obrigatória para seed)
 
 ### Neon
 
@@ -79,5 +89,5 @@ DIRECT_URL="postgresql://..."
 ```
 
 ## Seed
-- Admin criado por padrão: `admin@matriz3dstudio.local` / `admin123`
+- O usuário admin do seed vem de `ADMIN_SEED_EMAIL` e `ADMIN_SEED_PASSWORD`.
 
