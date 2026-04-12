@@ -1,0 +1,66 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+yarn.lock
+.pnpm-debug.log
+
+*.pdf
+
+# Build
+dist/
+build/
+out/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Environment variables
+.env
+.env.test
+.env.development
+.env.production
+.env.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage / Tests
+coverage/
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Prisma / TypeORM
+# Prisma migrations devem ser versionadas no repositorio
+!prisma/migrations/
+!prisma/migrations/**
+ormconfig.json
+ormconfig.js
+
+# ESLint / Prettier cache
+.eslintcache
+.prettiercache
+
+# Redis / DB dumps (se usar)
+dump.rdb
+*.sql
+!prisma/migrations/**/*.sql
+
+/src/generated/prisma

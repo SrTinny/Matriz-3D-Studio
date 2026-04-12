@@ -1,0 +1,126 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/* ====== Auth / Users ====== */
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ProductTag {
+  PROMOCAO
+  NOVO
+}
+
+model User {
+  id              String   @id @default(uuid())
+  name            String
+  email           String   @unique
+  password        String
+  role            Role     @default(USER)
+  isActive        Boolean  @default(false)
+  activationToken String?  @unique
+  activationTokenExpiresAt DateTime?
+  selectedAddressId String?
+  selectedAddress Address? @relation("SelectedAddress", fields: [selectedAddressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  addresses       Address[] @relation("UserAddresses")
+  carts           Cart[]
+  refreshSessions RefreshTokenSession[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([selectedAddressId])
+}
+
+model Address {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
+  selectedByUsers User[]  @relation("SelectedAddress")
+  label          String
+  zipCode        String
+  state          String
+  city           String
+  neighborhood   String
+  street         String
+  number         String
+  complement     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model RefreshTokenSession {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family              String
+  tokenHash           String   @unique
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  revokedReason       String?
+  replacedByTokenHash String?
+  userAgent           String?
+  ipAddress           String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@index([family])
+  @@index([expiresAt])
+}
+
+/* ====== Produtos / Carrinho ====== */
+model Product {
+  id          String     @id @default(uuid())
+  name        String
+  slug        String     @unique      // <- chave única p/ upsert/skipDuplicates
+  description String?
+  price       Float
+  stock       Int        @default(0)
+  imageUrl    String?
+  tag         ProductTag?
+  categoryId  String?
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  categoryName String?
+  cartItems   CartItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique   // <- garante que cada user tenha só 1 cart
+  user      User     @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+
+  @@index([cartId])
+  @@index([productId])
+}

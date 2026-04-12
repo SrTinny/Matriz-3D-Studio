@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+/* ===== Tokens base ===== */
+@theme {
+  --color-brand: #42A5F5;
+  --color-accent: #FFB74D;
+  --color-secondary-red: #EF5350;
+  --color-secondary-orange: #FFB74D;
+  --color-secondary-green: #81C784;
+}
+
+/* ===== Reset responsivo essencial ===== */
+*, *::before, *::after { box-sizing: border-box; }
+img, video, canvas, svg { display: block; max-width: 100%; height: auto; }
+iframe { width: 100%; }
+table { width: 100%; border-collapse: collapse; overflow-x: auto; display: block; }
+
+/* Tipografia fluida (ajuste os clamps ao seu design) */
+:root {
+  --step--1: clamp(0.80rem, 0.76rem + 0.22vw, 0.90rem);
+  --step-0:  clamp(0.95rem, 0.88rem + 0.35vw, 1.00rem);
+  --step-1:  clamp(1.10rem, 1.02rem + 0.50vw, 1.25rem);
+  --step-2:  clamp(1.28rem, 1.17rem + 0.70vw, 1.56rem);
+  --step-3:  clamp(1.50rem, 1.33rem + 0.95vw, 1.95rem);
+}
+
+/* ===== Light (default) ===== */
+:root {
+  --color-bg:     #f5f9ff;
+  --color-card:   #ffffff;
+  --color-text:   #0f172a;
+  --color-header: #ffffff;
+  --color-border: color-mix(in oklab, var(--color-card), black 10%);
+  --color-muted:  color-mix(in oklab, var(--color-text), white 40%);
+  /* hover/interactive tokens */
+  --color-hover: color-mix(in oklab, var(--color-card), black 6%);
+}
+
+/* ===== Dark ===== */
+.dark {
+  --color-bg:     #08111f;
+  --color-card:   #0f1c2f;
+  --color-text:   #e5f0ff;
+  --color-header: #08111f;
+  --color-border: color-mix(in oklab, var(--color-card), white 12%);
+  --color-muted:  color-mix(in oklab, var(--color-text), black 35%);
+  /* hover/interactive tokens for dark */
+  --color-hover: color-mix(in oklab, var(--color-card), white 4%);
+}
+
+/* ===== Base ===== */
+html, body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at top, color-mix(in oklab, var(--color-brand), white 88%) 0%, transparent 42%),
+    linear-gradient(180deg, var(--color-bg) 0%, color-mix(in oklab, var(--color-bg), white 6%) 100%);
+  color: var(--color-text);
+  font-size: 100%;
+}
+body { font-size: var(--step-0); line-height: 1.6; }
+body > main { flex: 1; }
+
+h1 { font-size: var(--step-3); }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+
+::selection {
+  background: color-mix(in oklab, var(--color-brand), white 70%);
+  color: #000;
+}
+
+/* Acessibilidade: reduzir animações quando preferido */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* ===== COMPONENTES ===== */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors;
+  }
+  .btn-primary { color:#fff; background: var(--color-brand); }
+  .btn-primary:hover { background-color: color-mix(in oklab, var(--color-brand), black 6%); }
+
+  .btn-accent  { color:#fff; background: var(--color-accent); }
+  .btn-accent:hover { background-color: color-mix(in oklab, var(--color-accent), black 6%); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+  .btn[disabled], .btn:disabled { @apply opacity-60 cursor-not-allowed; }
+
+  /* Cards */
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    @apply rounded-xl shadow-lg;
+  }
+
+  /* Inputs */
+  .input-base {
+    background: var(--color-card);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    @apply w-full rounded-lg px-3 py-2 text-sm outline-none ring-0;
+  }
+  .input-base::placeholder { color: var(--color-muted); }
+  .input-base:focus { @apply border-transparent ring-2 ring-brand; box-shadow: none; }
+  .input-base:disabled { @apply opacity-60 cursor-not-allowed; }
+
+  /* Badges pequenas úteis */
+  .badge {
+    background: color-mix(in oklab, var(--color-brand), white 85%);
+    color: var(--color-brand);
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+
+  /* Utilitários responsivos globais */
+  .layout-container { @apply w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8; }
+
+  .auto-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0,1fr));
+    gap: 1rem;
+  }
+  @media (min-width: 640px) { .auto-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (min-width: 1024px){ .auto-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+}
+
+/* ===== Header usa tokens (aplique via style no componente) ===== */
+/* Ex.: <header style={{ background:'var(--color-header)', borderColor:'var(--color-border)' }} /> */
