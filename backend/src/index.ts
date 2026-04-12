@@ -1,6 +1,5 @@
 import './config/env'
 import express from 'express'
-import path from 'node:path'
 import cookieParser from 'cookie-parser'
 import cors, { CorsOptions } from 'cors'
 import helmet from 'helmet'
@@ -23,7 +22,6 @@ app.disable('x-powered-by')
 app.use(express.json())
 app.use(cookieParser())
 app.use(helmet({ crossOriginResourcePolicy: false }))
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')))
 
 /* ============== CORS ============== */
 // Somente origens locais durante o desenvolvimento

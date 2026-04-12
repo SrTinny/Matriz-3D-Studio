@@ -161,8 +161,8 @@ export default function HeaderBar() {
 
   
 
-  // Esconde HeaderBar na tela de login
-  if (path === "/login") return null;
+  // Esconde HeaderBar nas telas de auth
+  if (path === "/login" || path === "/register") return null;
 
   if (!ready) {
     return (

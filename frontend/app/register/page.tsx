@@ -1,6 +1,7 @@
 // app/register/page.tsx
 "use client";
 
+import Image from 'next/image';
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { IMaskInput } from "react-imask";
@@ -9,6 +10,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import logo from '../../assets/logo.png';
+import Link from 'next/link';
 
 /* ===================== Helpers ===================== */
 const digits = (v: string) => (v || "").replace(/\D/g, "");
@@ -138,11 +141,20 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="card w-full max-w-md p-6 space-y-4">
-        <header className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold text-brand">Cadastro</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
+    <main className="min-h-screen flex items-start justify-center px-4 py-4 md:items-center md:py-6">
+      <div className="card w-full max-w-2xl p-4 space-y-3 md:p-5 md:space-y-4">
+        <Link href="/" className="mx-auto flex w-full max-w-[200px] justify-center" aria-label="Ir para a página inicial">
+          <Image
+            src={logo}
+            alt="Matriz 3D Studio"
+            priority
+            className="h-11 w-auto max-w-full object-contain md:h-13"
+          />
+        </Link>
+
+        <header className="space-y-0 text-center">
+          <h1 className="text-xl font-bold text-brand md:text-2xl">Cadastro</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-300 md:text-sm">
             Crie sua conta para continuar.
           </p>
         </header>
@@ -157,9 +169,9 @@ export default function RegisterPage() {
           </p>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3 md:grid-cols-2 md:gap-4">
           <div>
-            <label htmlFor="name" className="block text-sm mb-1">
+            <label htmlFor="name" className="mb-1 block text-sm">
               Nome
             </label>
             <input
@@ -177,7 +189,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm mb-1">
+            <label htmlFor="email" className="mb-1 block text-sm">
               E-mail
             </label>
             <input
@@ -197,7 +209,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="cpf" className="block text-sm mb-1">
+            <label htmlFor="cpf" className="mb-1 block text-sm">
               CPF
             </label>
             <Controller
@@ -228,7 +240,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="phone" className="block text-sm mb-1">
+            <label htmlFor="phone" className="mb-1 block text-sm">
               Telefone
             </label>
             <Controller
@@ -259,7 +271,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm mb-1">
+            <label htmlFor="password" className="mb-1 block text-sm">
               Senha
             </label>
             <input
@@ -279,7 +291,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="confirm" className="block text-sm mb-1">
+            <label htmlFor="confirm" className="mb-1 block text-sm">
               Confirmar senha
             </label>
             <input
@@ -298,13 +310,15 @@ export default function RegisterPage() {
             )}
           </div>
 
-          <button
-            disabled={isSubmitting}
-            className="btn btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-disabled={isSubmitting}
-          >
-            {isSubmitting ? "Enviando..." : "Cadastrar"}
-          </button>
+          <div className="md:col-span-2 flex justify-center">
+            <button
+              disabled={isSubmitting}
+              className="btn btn-primary w-full max-w-[220px] disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-disabled={isSubmitting}
+            >
+              {isSubmitting ? "Enviando..." : "Cadastrar"}
+            </button>
+          </div>
         </form>
 
         <p className="text-sm text-center text-slate-600 dark:text-slate-300">

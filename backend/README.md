@@ -56,6 +56,7 @@ npx prisma db seed
 
 ## Variáveis de ambiente relevantes
 - `DATABASE_URL` (obrigatória)
+- `DIRECT_URL` (recomendada para migrations no Neon)
 - `JWT_SECRET` (obrigatória)
 - `PORT` (default `3000`)
 - `FRONTEND_URL`
@@ -65,6 +66,17 @@ npx prisma db seed
 - `AUTH_COOKIE_SECURE`
 - `AUTH_COOKIE_SAME_SITE`
 - `AUTH_COOKIE_DOMAIN`
+
+### Neon
+
+Se você estiver usando Neon, deixe a `DATABASE_URL` apontando para a URL de conexão do app e configure `DIRECT_URL` com a URL direta do banco para usar em `prisma migrate dev` e `prisma db seed`.
+
+Exemplo:
+
+```env
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+```
 
 ## Seed
 - Admin criado por padrão: `admin@matriz3dstudio.local` / `admin123`

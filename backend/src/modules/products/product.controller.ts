@@ -9,8 +9,10 @@ function emptyToUndefined(value: unknown) {
   return trimmed.length ? trimmed : undefined
 }
 
-function buildUploadedImageUrl(req: Request, fileName: string) {
-  return `${req.protocol}://${req.get('host')}/uploads/products/${fileName}`
+function buildUploadedImageDataUrl(file: Express.Multer.File) {
+  const mimeType = file.mimetype || 'image/jpeg'
+  const base64 = file.buffer.toString('base64')
+  return `data:${mimeType};base64,${base64}`
 }
 
 /* ========= helpers ========= */
@@ -235,7 +237,7 @@ export async function createProduct(req: Request, res: Response) {
   }
 
   const data = parsed.data
-  const uploadedImageUrl = req.file?.filename ? buildUploadedImageUrl(req, req.file.filename) : undefined
+  const uploadedImageUrl = req.file ? buildUploadedImageDataUrl(req.file) : undefined
 
   try {
     // handle free-text categoryName: find or create Category and set categoryId
@@ -307,7 +309,7 @@ export async function updateProduct(req: Request, res: Response) {
     return res.status(400).json({ message: 'Dados inválidos', errors: parsed.error.flatten() })
   }
   const patch = parsed.data
-  const uploadedImageUrl = req.file?.filename ? buildUploadedImageUrl(req, req.file.filename) : undefined
+  const uploadedImageUrl = req.file ? buildUploadedImageDataUrl(req.file) : undefined
 
   // aplica somente campos presentes
   const data: {

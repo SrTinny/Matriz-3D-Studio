@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +10,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import { mergeGuestCartToServer } from '@/lib/cart';
 import { setCurrentUser } from '@/lib/auth';
+import logo from '../../assets/logo.png';
+import Link from 'next/link';
 
 const schema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -63,6 +66,15 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="card w-full max-w-md p-8 space-y-6">
+        <Link href="/" className="flex justify-center" aria-label="Ir para a página inicial">
+          <Image
+            src={logo}
+            alt="Matriz 3D Studio"
+            priority
+            className="h-36 w-auto max-w-full object-contain"
+          />
+        </Link>
+
         <h1 className="text-2xl font-bold text-center text-brand">Login</h1>
 
         {error && (
