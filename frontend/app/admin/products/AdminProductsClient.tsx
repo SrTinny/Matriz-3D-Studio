@@ -105,9 +105,16 @@ export default function AdminProductsPage() {
       const res = await api.get("/products", {
         params: { page, perPage, search: debouncedSearch || undefined },
       });
-      setItems((res.data?.items ?? []) as Product[]);
-      setTotalPages((res.data?.totalPages ?? res.data?.total ?? 1) as number);
-      setTotalItems((res.data?.totalItems ?? res.data?.total ?? 0) as number);
+      const items = (res.data?.items ?? []) as Product[];
+      const totalItems = Number(res.data?.totalItems ?? res.data?.total ?? items.length ?? 0);
+      const totalPages = Number(
+        res.data?.totalPages ??
+          (perPage > 0 ? Math.max(1, Math.ceil(totalItems / perPage)) : 1),
+      );
+
+      setItems(items);
+      setTotalItems(totalItems);
+      setTotalPages(totalPages);
     } catch (e: unknown) {
       let msg = "Erro ao carregar produtos";
       if (axios.isAxiosError(e)) {
@@ -222,7 +229,7 @@ export default function AdminProductsPage() {
   if (!ready) return null;
 
   return (
-    <main className="container mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <main className="container mx-auto max-w-screen-xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
       {/* Header (apenas título/descritivo); ações globais no HeaderBar */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -295,9 +302,9 @@ export default function AdminProductsPage() {
 
       {/* Lista desktop (tabela) */}
       <section className="card overflow-hidden hidden md:block">
-        <div className="max-h-[520px] overflow-auto">
+        <div className="overflow-auto max-h-[58dvh]">
           <div className="min-w-full">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [display:table] table-auto">
             <thead className="sticky top-0 backdrop-blur theme-card-bg">
               <tr className="[&>th]:p-3 [&>th]:text-left [&>th]:font-semibold text-slate-700 dark:text-slate-200">
                 <th>Imagem</th>
@@ -357,7 +364,7 @@ export default function AdminProductsPage() {
       <ProductFormModal open={modalOpen} onClose={() => setModalOpen(false)} editingProduct={editing} onSaveSuccess={handleSaveSuccess} />
 
       {/* Pagination controls */}
-      <div className="mt-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
         <div className="text-sm text-slate-600">Total: {totalItems} itens</div>
         <div>
           <PaginationControls currentPage={page} totalPages={totalPages} onPageChange={(n) => setPage(n)} loading={loading} />

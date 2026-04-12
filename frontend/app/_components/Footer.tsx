@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type FooterLink = {
   label: string;
@@ -104,8 +105,12 @@ function renderBenefitIcon(icon: (typeof benefitItems)[number]["icon"]) {
 }
 
 export default function Footer() {
+  const pathname = usePathname();
+  const isAdminProductsPage = pathname === '/admin/products';
+  if (pathname?.startsWith('/admin') && !isAdminProductsPage) return null;
+
   return (
-    <footer className="mt-12 pb-24 md:pb-0">
+    <footer className="mt-12">
       <div className="bg-slate-700 text-white">
         <button
           type="button"

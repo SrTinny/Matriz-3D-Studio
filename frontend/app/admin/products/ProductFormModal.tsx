@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,7 +27,6 @@ const productSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().nonnegative("Preço inválido"),
   stock: z.coerce.number().int("Estoque deve ser inteiro").nonnegative("Estoque inválido"),
-  imageUrl: z.string().url("URL inválida").optional(),
   tag: z.enum(["PROMOCAO", "NOVO"]).optional(),
   categoryName: z.string().optional().nullable(),
 });
@@ -46,12 +46,17 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
   const [allCategories, setAllCategories] = useState<{ id: string; name: string }[]>([]);
   const [suggestionsVisible, setSuggestionsVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [categoryQuery, setCategoryQuery] = useState("");
   
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as unknown as Resolver<ProductFormData>,
     defaultValues: { name: "", description: "", price: 0, stock: 0 },
   });
+
+  const filteredCategories = allCategories
+    .filter((c) => (c.name || '').toLowerCase().includes(categoryQuery.toLowerCase()))
+    .slice(0, 8);
 
   useEffect(() => {
     if (editingProduct) {
@@ -65,12 +70,25 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
       });
       setPreviewUrl(editingProduct.imageUrl ?? "");
       setSelectedImage(null);
+      setCategoryQuery(editingProduct.category?.name ?? "");
     } else {
       reset({ name: "", description: "", price: 0, stock: 0, categoryName: "" });
       setPreviewUrl("");
       setSelectedImage(null);
+      setCategoryQuery("");
     }
   }, [editingProduct, reset]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   useEffect(() => {
     return () => {
@@ -98,7 +116,10 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
           // if event provides a detail with new category name, prefill it
           try {
             const detail = (e as CustomEvent).detail as string | undefined;
-            if (detail) reset((vals) => ({ ...vals, categoryName: detail }));
+            if (detail) {
+              reset((vals) => ({ ...vals, categoryName: detail }));
+              setCategoryQuery(detail);
+            }
           } catch {}
         } catch {}
       })();
@@ -145,12 +166,26 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-2xl">
-        <div className="card p-5">
-          <h2 className="mb-4 text-lg font-semibold">{editingProduct ? "Editar produto" : "Novo produto"}</h2>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
+      <button
+        type="button"
+        aria-label="Fechar modal"
+        className="fixed inset-0 bg-black/55 backdrop-blur-[1px]"
+        onClick={onClose}
+      />
+
+      <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-2xl">
+        <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)]">
+            {editingProduct ? "Editar produto" : "Novo produto"}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Preencha os dados e envie uma imagem com proporção horizontal para melhor resultado.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="max-h-[calc(100dvh-10rem)] overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="mb-1 block text-sm" htmlFor="name">Nome</label>
               <input id="name" className="input-base" {...register("name")} />
@@ -181,20 +216,37 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
                 id="imageFile"
                 className="input-base"
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
                   setSelectedImage(file);
-                  if (previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
-                  if (file) setPreviewUrl(URL.createObjectURL(file));
+
+                  if (previewUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(previewUrl);
+                  }
+
+                  if (file) {
+                    setPreviewUrl(URL.createObjectURL(file));
+                  } else if (editingProduct?.imageUrl) {
+                    setPreviewUrl(editingProduct.imageUrl);
+                  } else {
+                    setPreviewUrl("");
+                  }
                 }}
               />
-              <p className="mt-1 text-xs text-slate-500">PNG, JPG ou WEBP ate 5MB.</p>
-              {previewUrl && (
-                <div className="mt-2 overflow-hidden rounded border border-black/10 dark:border-white/10">
-                  <img src={previewUrl} alt="Preview da imagem" className="h-40 w-full object-cover" />
+              <p className="mt-1 text-xs text-slate-500">PNG, JPG ou WEBP até 5MB.</p>
+
+              <div className="mt-2 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)]">
+                <div className="relative aspect-[16/9] w-full">
+                  {previewUrl ? (
+                    <Image src={previewUrl} alt="Preview da imagem" fill sizes="(max-width: 768px) 100vw, 700px" className="object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-slate-500">
+                      Nenhuma imagem selecionada
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             <div>
@@ -206,65 +258,73 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
               </select>
             </div>
 
-            <div>
+            <div className="relative">
               <label className="mb-1 block text-sm" htmlFor="categoryName">Categoria</label>
               <input
                 id="categoryName"
                 className="input-base"
                 {...register('categoryName')}
+                value={categoryQuery}
                 placeholder="ex: roupas, eletronicos"
-                onFocus={() => setSuggestionsVisible(true)}
+                onFocus={() => {
+                  setSuggestionsVisible(true);
+                  setActiveIndex(null);
+                }}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setCategoryQuery(next);
+                  setValue('categoryName', next);
+                }}
                 onBlur={() => setTimeout(() => setSuggestionsVisible(false), 150)}
                 onKeyDown={(e) => {
-                  const filtered = allCategories.filter((c) => (c.name || '').toLowerCase().includes(String((document.getElementById('categoryName') as HTMLInputElement)?.value ?? '').toLowerCase()));
                   if (e.key === 'ArrowDown') {
-                    setActiveIndex((i) => (i === null ? 0 : Math.min(filtered.length - 1, i + 1)));
+                    setActiveIndex((i) => (i === null ? 0 : Math.min(filteredCategories.length - 1, i + 1)));
                     e.preventDefault();
                   } else if (e.key === 'ArrowUp') {
-                    setActiveIndex((i) => (i === null ? Math.max(0, filtered.length - 1) : Math.max(0, i - 1)));
+                    setActiveIndex((i) => (i === null ? Math.max(0, filteredCategories.length - 1) : Math.max(0, i - 1)));
                     e.preventDefault();
                   } else if (e.key === 'Enter') {
-                    if (activeIndex !== null && filtered[activeIndex]) {
-                      const name = filtered[activeIndex].name;
-                      reset((vals) => ({ ...vals, categoryName: name }));
+                    if (activeIndex !== null && filteredCategories[activeIndex]) {
+                      const name = filteredCategories[activeIndex].name;
+                      setCategoryQuery(name);
+                      setValue('categoryName', name);
                       setSuggestionsVisible(false);
                       e.preventDefault();
                     }
                   }
                 }}
               />
-              {suggestionsVisible && allCategories.length > 0 && (
-                <ul className="mt-1 max-h-40 overflow-auto rounded border z-50 shadow absolute bg-[var(--color-card)] text-[var(--color-text)]" style={{ minWidth: 240, borderColor: 'var(--color-border)' }}>
-                  {allCategories
-                    .filter((c) => (c.name || '').toLowerCase().includes(String((document.getElementById('categoryName') as HTMLInputElement)?.value ?? '').toLowerCase()))
-                    .slice(0, 8)
-                    .map((c, idx) => (
-                      <li
-                        key={c.id}
-                        className={`px-3 py-2 cursor-pointer hover:bg-[var(--color-hover)] ${activeIndex === idx ? 'bg-[var(--color-hover)]' : ''}`}
-                        onMouseDown={() => {
-                          reset((vals) => ({ ...vals, categoryName: c.name }));
-                          setSuggestionsVisible(false);
-                        }}
-                      >
-                        {c.name}
-                      </li>
-                    ))}
+
+              {suggestionsVisible && filteredCategories.length > 0 && (
+                <ul className="absolute left-0 right-0 z-50 mt-1 max-h-44 overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg">
+                  {filteredCategories.map((c, idx) => (
+                    <li
+                      key={c.id}
+                      className={`cursor-pointer px-3 py-2 text-sm hover:bg-[var(--color-hover)] ${activeIndex === idx ? 'bg-[var(--color-hover)]' : ''}`}
+                      onMouseDown={() => {
+                        setCategoryQuery(c.name);
+                        setValue('categoryName', c.name);
+                        setSuggestionsVisible(false);
+                      }}
+                    >
+                      {c.name}
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
+          </div>
 
-            <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
-              <button disabled={isSubmitting || saving} className="btn btn-primary" aria-disabled={isSubmitting || saving}>
-                {isSubmitting || saving ? (editingProduct ? "Salvando…" : "Criando…") : editingProduct ? "Salvar alterações" : "Criar"}
-              </button>
+          <div className="mt-6 flex flex-col-reverse gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:justify-end">
+            <button type="button" className="btn btn-outline" onClick={onClose}>
+              Cancelar
+            </button>
 
-              <button type="button" className="btn border border-black/10 dark:border-white/10" onClick={onClose}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
+            <button disabled={isSubmitting || saving} className="btn btn-primary" aria-disabled={isSubmitting || saving}>
+              {isSubmitting || saving ? (editingProduct ? "Salvando..." : "Criando...") : editingProduct ? "Salvar alterações" : "Criar produto"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

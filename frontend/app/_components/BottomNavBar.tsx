@@ -9,6 +9,7 @@ import { hydrateSession } from '@/lib/auth';
 export default function BottomNavBar() {
   const path = usePathname();
   const [cartCount, setCartCount] = useState(0);
+  const isAdminRoute = path?.startsWith('/admin');
 
   useEffect(() => {
     let mounted = true;
@@ -27,6 +28,8 @@ export default function BottomNavBar() {
     window.addEventListener('cart:updated', onUpdate);
     return () => { mounted = false; window.removeEventListener('cart:updated', onUpdate); };
   }, []);
+
+  if (isAdminRoute) return null;
 
   const NavItem = ({ href, label, icon, badge }: { href: string; label: string; icon: React.ReactNode; badge?: number }) => {
     const active = path === href || (href !== '/' && path.startsWith(href));

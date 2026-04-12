@@ -13,7 +13,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 img, video, canvas, svg { display: block; max-width: 100%; height: auto; }
 iframe { width: 100%; }
-table { width: 100%; border-collapse: collapse; overflow-x: auto; display: block; }
+table { width: 100%; border-collapse: collapse; }
 
 /* Tipografia fluida (ajuste os clamps ao seu design) */
 :root {
@@ -50,6 +50,9 @@ table { width: 100%; border-collapse: collapse; overflow-x: auto; display: block
 
 /* ===== Base ===== */
 html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -58,6 +61,7 @@ html, body {
     linear-gradient(180deg, var(--color-bg) 0%, color-mix(in oklab, var(--color-bg), white 6%) 100%);
   color: var(--color-text);
   font-size: 100%;
+  overflow-x: hidden;
 }
 body { font-size: var(--step-0); line-height: 1.6; }
 body > main { flex: 1; }
