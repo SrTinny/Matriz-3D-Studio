@@ -24,6 +24,15 @@ app.use(cookieParser())
 app.use(helmet({ crossOriginResourcePolicy: false }))
 
 /* ============== CORS ============== */
+function parseAllowedOrigins(raw?: string) {
+  if (!raw) return []
+
+  return raw
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+}
+
 // Somente origens locais durante o desenvolvimento
 const staticAllowed = [
   'http://localhost:3000',
@@ -32,12 +41,15 @@ const staticAllowed = [
   'http://127.0.0.1:3001',
 ].filter(Boolean)
 
-if (env.frontendUrl) staticAllowed.push(env.frontendUrl)
+const envAllowed = parseAllowedOrigins(env.frontendUrl)
+const allowedOrigins = [...new Set([...staticAllowed, ...envAllowed])]
+
+const vercelPreviewRe = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i
 
 const corsOptions: CorsOptions = {
   origin(origin, cb) {
     if (!origin) return cb(null, true) // curl/healthchecks
-    if (staticAllowed.includes(origin)) {
+    if (allowedOrigins.includes(origin) || vercelPreviewRe.test(origin)) {
       return cb(null, true)
     }
     return cb(new Error(`Origin not allowed by CORS: ${origin}`))
