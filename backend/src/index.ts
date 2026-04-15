@@ -24,12 +24,16 @@ app.use(cookieParser())
 app.use(helmet({ crossOriginResourcePolicy: false }))
 
 /* ============== CORS ============== */
+function normalizeOrigin(origin: string) {
+  return origin.trim().replace(/\/+$/, '')
+}
+
 function parseAllowedOrigins(raw?: string) {
   if (!raw) return []
 
   return raw
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => normalizeOrigin(origin))
     .filter(Boolean)
 }
 
@@ -49,7 +53,8 @@ const vercelPreviewRe = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i
 const corsOptions: CorsOptions = {
   origin(origin, cb) {
     if (!origin) return cb(null, true) // curl/healthchecks
-    if (allowedOrigins.includes(origin) || vercelPreviewRe.test(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin)
+    if (allowedOrigins.includes(normalizedOrigin) || vercelPreviewRe.test(normalizedOrigin)) {
       return cb(null, true)
     }
     return cb(new Error(`Origin not allowed by CORS: ${origin}`))
