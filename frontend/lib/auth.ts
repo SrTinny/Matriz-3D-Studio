@@ -1,5 +1,5 @@
 import axios from "axios";
-import { api } from "./api";
+import { api, clearCsrfToken, setCsrfToken } from "./api";
 import {
   clearCachedAuthUser,
   getCachedAuthUser,
@@ -21,17 +21,19 @@ export async function hydrateSession(force = false): Promise<AuthUser | null> {
   }
 
   inFlightSessionRequest = api
-    .get<{ user: AuthUser }>("/auth/me", {
+    .get<{ user: AuthUser; csrfToken?: string | null }>("/auth/me", {
       _skipAuthRedirect: true,
       _skipAuthRefresh: true,
     })
     .then((response) => {
+      setCsrfToken(response.data?.csrfToken ?? null);
       const user = response.data?.user ?? null;
       setCachedAuthUser(user);
       return user;
     })
     .catch((error: unknown) => {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
+        clearCsrfToken();
         clearCachedAuthUser();
         return null;
       }
@@ -70,6 +72,7 @@ export async function logout() {
   } catch {
     // Limpeza local deve acontecer mesmo se o backend já invalidou a sessão.
   } finally {
+    clearCsrfToken();
     clearCachedAuthUser();
   }
 }

@@ -20,6 +20,16 @@ function normalizeBaseURL(url?: string | null) {
 
 const BASE_URL = normalizeBaseURL(process.env.NEXT_PUBLIC_API_URL);
 const CSRF_COOKIE_NAME = "ux_csrf";
+let csrfTokenMemory: string | null = null;
+
+export function setCsrfToken(token?: string | null) {
+  const normalized = (token ?? "").trim();
+  csrfTokenMemory = normalized || null;
+}
+
+export function clearCsrfToken() {
+  csrfTokenMemory = null;
+}
 
 function readCookie(name: string) {
   if (typeof document === "undefined") return null;
@@ -80,7 +90,7 @@ api.interceptors.request.use((config) => {
   config.withCredentials = true;
 
   if (isUnsafeMethod(config.method)) {
-    const csrfToken = readCookie(CSRF_COOKIE_NAME);
+    const csrfToken = csrfTokenMemory ?? readCookie(CSRF_COOKIE_NAME);
     config.headers = config.headers ?? {};
     if (csrfToken) {
       config.headers["X-CSRF-Token"] = csrfToken;
@@ -107,8 +117,8 @@ api.interceptors.response.use(
       cfg._retryAuth = true;
 
       try {
-        const csrfToken = readCookie(CSRF_COOKIE_NAME);
-        await refreshClient.post(
+        const csrfToken = csrfTokenMemory ?? readCookie(CSRF_COOKIE_NAME);
+        const refreshResponse = await refreshClient.post<{ csrfToken?: string | null }>(
           "/auth/refresh",
           undefined,
           {
@@ -117,9 +127,11 @@ api.interceptors.response.use(
             _skipAuthRedirect: true,
           },
         );
+        setCsrfToken(refreshResponse.data?.csrfToken ?? null);
 
         return api(cfg);
       } catch {
+        clearCsrfToken();
         clearCachedAuthUser();
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("auth:expired"));
@@ -132,6 +144,7 @@ api.interceptors.response.use(
     }
 
     if (status === 401) {
+      clearCsrfToken();
       clearCachedAuthUser();
       if (!cfg._skipAuthRedirect) {
         redirectToLogin();

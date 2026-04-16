@@ -17,9 +17,6 @@
     "test:sorts": "node scripts/test-sorts-native.js",
     "postinstall": "prisma generate && npm run build"
   },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",

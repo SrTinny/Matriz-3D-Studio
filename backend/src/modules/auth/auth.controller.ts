@@ -8,6 +8,7 @@ import { addressSchema, activateSchema, registerSchema, loginSchema } from './au
 import {
   addDays,
   addHours,
+  CSRF_COOKIE_NAME,
   clearAuthCookies,
   createActivationToken,
   createCsrfToken,
@@ -221,6 +222,7 @@ export async function login(req: Request, res: Response) {
   return res.json({
     message: 'Login realizado com sucesso',
     user: toPublicUser(user),
+    csrfToken,
   });
 }
 
@@ -235,7 +237,10 @@ export async function me(req: Request, res: Response) {
     return res.status(401).json({ message: 'Sessão inválida' });
   }
 
-  return res.json(payload);
+  return res.json({
+    ...payload,
+    csrfToken: req.cookies?.[CSRF_COOKIE_NAME] ?? null,
+  });
 }
 
 // POST /auth/refresh
@@ -312,7 +317,10 @@ export async function refreshSession(req: Request, res: Response) {
 
   setAuthCookies(res, { accessToken, refreshToken: nextRefreshToken, csrfToken });
 
-  return res.json({ user: toPublicUser(session.user) });
+  return res.json({
+    user: toPublicUser(session.user),
+    csrfToken,
+  });
 }
 
 // POST /auth/logout

@@ -10,6 +10,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { mergeGuestCartToServer } from '@/lib/cart';
 import { setCurrentUser } from '@/lib/auth';
+import { setCsrfToken } from '@/lib/api';
 import logo from '../../assets/logo.png';
 import Link from 'next/link';
 
@@ -36,6 +37,7 @@ export default function LoginPage() {
         _skipAuthRedirect: true,
       });
       const user = res.data?.user;
+      setCsrfToken(res.data?.csrfToken ?? null);
       if (user) {
         setCurrentUser(user);
         toast.success("Login efetuado!");
