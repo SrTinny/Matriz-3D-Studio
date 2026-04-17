@@ -52,7 +52,7 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
   const [adding, setAdding] = useState(false);
 
   const handleAdd = async () => {
-    if (product.stock <= 0 || adding) return;
+    if (adding) return;
     try {
       setAdding(true);
       await onAddToCart(product.id);
@@ -78,7 +78,7 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
         )}
 
         <Image
-          src={product.imageUrl ?? '/placeholder.png'}
+          src={product.imageUrl ?? '/placeholder.svg'}
           alt={product.name}
           fill
           sizes="(max-width:768px) 100vw, (max-width:1024px) 50vw, 33vw"
@@ -119,14 +119,14 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
 
         {/* Add button: visible only on hover or focus-within */}
         <button
-          disabled={product.stock <= 0 || adding}
+          disabled={adding}
           onClick={(e) => { e.stopPropagation(); handleAdd(); }}
           className={clsx(
             'mt-1 inline-flex items-center justify-center rounded-md bg-brand text-white px-3 py-1.5 text-xs transition-colors',
             'disabled:opacity-60',
           )}
-          title={product.stock <= 0 ? 'Disponível para produção' : 'Adicionar ao carrinho'}
-          aria-disabled={product.stock <= 0 || adding}
+          title={product.stock <= 0 ? 'Adicionar para produção sob demanda' : 'Adicionar ao carrinho'}
+          aria-disabled={adding}
         >
           {adding ? '…' : 'Adicionar'}
         </button>

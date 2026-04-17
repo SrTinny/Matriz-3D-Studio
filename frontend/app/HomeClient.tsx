@@ -461,7 +461,7 @@ export default function HomeClient() {
               <div className="grid grid-cols-[110px_1fr] gap-3 items-center">
                 <div className="relative h-28 w-full rounded-xl overflow-hidden bg-black/5">
                   <Image
-                    src={heroProduct.imageUrl ?? '/placeholder.png'}
+                    src={heroProduct.imageUrl ?? '/placeholder.svg'}
                     alt={heroProduct.name}
                     fill
                     sizes="220px"

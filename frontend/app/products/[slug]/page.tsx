@@ -176,7 +176,7 @@ export default function ProductPage() {
         <div className="md:col-span-5">
           <div className="card w-full overflow-hidden rounded-2xl">
             <div className="relative w-full aspect-[4/3]">
-              <Image src={product.imageUrl ?? '/placeholder.png'} alt={product.name} fill sizes="(max-width: 768px) 100vw, 45vw" className="object-cover" />
+              <Image src={product.imageUrl ?? '/placeholder.svg'} alt={product.name} fill sizes="(max-width: 768px) 100vw, 45vw" className="object-cover" />
             </div>
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function ProductPage() {
           </div>
 
           <div className="flex items-center gap-3 mt-2">
-            <button onClick={handleAddToCart} disabled={product.stock <= 0 || adding} className="btn btn-primary">{adding ? 'Adicionando…' : 'Adicionar ao carrinho'}</button>
+            <button onClick={handleAddToCart} disabled={adding} className="btn btn-primary">{adding ? 'Adicionando…' : 'Adicionar ao carrinho'}</button>
             <button onClick={handleBuyNow} disabled={product.stock <= 0} className="btn btn-outline">Comprar agora</button>
           </div>
 

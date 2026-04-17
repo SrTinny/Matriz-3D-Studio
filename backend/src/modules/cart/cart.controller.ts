@@ -31,7 +31,7 @@ export async function getCart(req: Request, res: Response) {
     include: {
       items: {
         include: {
-          product: { select: { id: true, name: true, price: true } },
+          product: { select: { id: true, name: true, price: true, stock: true, imageUrl: true } },
         },
       },
     },
@@ -66,11 +66,11 @@ export async function addItem(req: Request, res: Response) {
     ? await prisma.cartItem.update({
         where: { id: existing.id },
         data: { quantity: existing.quantity + quantity },
-        include: { product: true },
+        include: { product: { select: { id: true, name: true, price: true, stock: true, imageUrl: true } } },
       })
     : await prisma.cartItem.create({
         data: { cartId: cart.id, productId, quantity },
-        include: { product: true },
+        include: { product: { select: { id: true, name: true, price: true, stock: true, imageUrl: true } } },
       });
 
   res.status(existing ? 200 : 201).json(item);
@@ -107,7 +107,7 @@ export async function updateItemQuantity(
   const updated = await prisma.cartItem.update({
     where: { id: itemId },
     data: { quantity },
-    include: { product: true },
+    include: { product: { select: { id: true, name: true, price: true, stock: true, imageUrl: true } } },
   });
 
   res.json(updated);
