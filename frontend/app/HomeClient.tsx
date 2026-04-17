@@ -234,7 +234,7 @@ function ScrollableRow({ children, className }: ScrollableRowProps) {
 
 type ShelfSectionProps = {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   ctaHref: string;
   ctaLabel: string;
   products: Product[];
@@ -249,7 +249,7 @@ function ShelfSection({ title, subtitle, ctaHref, ctaLabel, products, onAddToCar
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-[var(--color-text)]">{title}</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{subtitle}</p>
+          {subtitle ? <p className="text-sm text-slate-600 dark:text-slate-300">{subtitle}</p> : null}
         </div>
         <Link href={ctaHref} className="shrink-0 text-sm font-medium text-brand hover:underline">
           {ctaLabel}
@@ -349,15 +349,18 @@ export default function HomeClient() {
     return Array.from(map.entries()).slice(0, 12).map(([value, label]) => ({ value, label }));
   }, [categories, products]);
 
-  const spotlightProducts = useMemo(() => products.slice(0, 10), [products]);
+  const featuredProducts = useMemo(
+    () => products.filter((product) => Boolean(product.tag)).slice(0, 10),
+    [products],
+  );
 
   const bestDeals = useMemo(
     () => [...products].sort((a, b) => a.price - b.price).slice(0, 10),
     [products],
   );
 
-  const trendingProducts = useMemo(
-    () => [...products].sort((a, b) => b.stock - a.stock).slice(0, 10),
+  const outOfStockProducts = useMemo(
+    () => products.filter((product) => product.stock <= 0).slice(0, 10),
     [products],
   );
 
@@ -524,42 +527,50 @@ export default function HomeClient() {
         </ScrollableRow>
       </section>
 
-      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {QUICK_ACTIONS.map((action) => (
-          <Link key={action.title} href={action.href} className="card p-3 space-y-2 hover:shadow-xl transition-shadow">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
-              {renderQuickActionIcon(action.icon)}
-            </span>
-            <h3 className="text-sm font-semibold leading-tight">{action.title}</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300">{action.description}</p>
-          </Link>
-        ))}
+      <section>
+        <ScrollableRow className="sm:hidden">
+          <div className="flex gap-2 pb-1">
+            {QUICK_ACTIONS.map((action) => (
+              <Link
+                key={action.title}
+                href={action.href}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-medium whitespace-nowrap hover:bg-[var(--color-hover)]"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-brand">
+                  {renderQuickActionIcon(action.icon)}
+                </span>
+                <span>{action.title}</span>
+              </Link>
+            ))}
+          </div>
+        </ScrollableRow>
+
+        <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {QUICK_ACTIONS.map((action) => (
+            <Link key={action.title} href={action.href} className="card p-3 space-y-2 hover:shadow-xl transition-shadow">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
+                {renderQuickActionIcon(action.icon)}
+              </span>
+              <h3 className="text-sm font-semibold leading-tight">{action.title}</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300">{action.description}</p>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <ShelfSection
-        title="Peças para levar agora"
-        subtitle="Seleção com preço competitivo para acelerar seu pedido."
+        title="Peças em Destaque"
         ctaHref="/products?sort=price_asc"
         ctaLabel="Ver mais ofertas"
-        products={bestDeals}
-        onAddToCart={addToCart}
-      />
-
-      <ShelfSection
-        title="Mais vistos na Matriz 3D Studio"
-        subtitle="Itens em destaque da vitrine principal, escolhidos pelo interesse dos clientes."
-        ctaHref="/products?sort=relevance"
-        ctaLabel="Ver vitrine completa"
-        products={spotlightProducts}
+        products={featuredProducts}
         onAddToCart={addToCart}
       />
 
       <ShelfSection
         title="Disponíveis para produção imediata"
-        subtitle="Produtos com boa disponibilidade para envio ou uso em projeto sem espera."
         ctaHref="/products"
         ctaLabel="Explorar catalogo"
-        products={trendingProducts}
+        products={outOfStockProducts}
         onAddToCart={addToCart}
       />
     </main>

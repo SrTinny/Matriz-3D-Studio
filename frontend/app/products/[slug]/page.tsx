@@ -187,7 +187,7 @@ export default function ProductPage() {
           <div className="flex items-center gap-4">
             <div className="text-2xl font-bold text-brand">{formatBRL(product.price)}</div>
             <div className="text-sm">
-              {product.stock > 0 ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Em estoque: {product.stock}</span> : <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Sem estoque</span>}
+              {product.stock > 0 ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Em estoque: {product.stock}</span> : <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Disponível para produção</span>}
             </div>
           </div>
 

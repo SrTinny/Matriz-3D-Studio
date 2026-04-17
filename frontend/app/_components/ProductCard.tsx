@@ -113,7 +113,7 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
             )}
             title={`Estoque: ${product.stock}`}
           >
-            {product.stock > 0 ? `Estoque: ${product.stock}` : 'Sem estoque'}
+            {product.stock > 0 ? `Estoque: ${product.stock}` : 'Disponível para produção'}
           </div>
         </div>
 
@@ -125,7 +125,7 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
             'mt-1 inline-flex items-center justify-center rounded-md bg-brand text-white px-3 py-1.5 text-xs transition-colors',
             'disabled:opacity-60',
           )}
-          title={product.stock <= 0 ? 'Sem estoque' : 'Adicionar ao carrinho'}
+          title={product.stock <= 0 ? 'Disponível para produção' : 'Adicionar ao carrinho'}
           aria-disabled={product.stock <= 0 || adding}
         >
           {adding ? '…' : 'Adicionar'}
