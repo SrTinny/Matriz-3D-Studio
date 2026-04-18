@@ -9,6 +9,7 @@ export type AdminProduct = {
   description?: string | null;
   price: number;
   wholesalePrice?: number | null;
+  wholesaleMinQuantity?: number | null;
   weightGrams?: number | null;
   printHours?: number | null;
   wholesaleEnabled?: boolean;

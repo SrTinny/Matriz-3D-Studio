@@ -85,6 +85,7 @@ model Product {
   description String?
   price       Float
   wholesalePrice Float?
+  wholesaleMinQuantity Int? 
   weightGrams Float?
   printHours  Float?
   wholesaleEnabled Boolean @default(false)

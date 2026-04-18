@@ -23,6 +23,7 @@ const productSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().nonnegative("Preço inválido"),
   wholesalePrice: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative().optional()),
+  wholesaleMinQuantity: z.coerce.number().int().positive("Informe ao menos 1 peça").default(1),
   weightGrams: z.coerce.number().nonnegative("Peso inválido").default(0),
   printHours: z.coerce.number().nonnegative("Horas inválidas").default(0),
   wholesaleEnabled: z.boolean().default(false),
@@ -50,7 +51,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting, dirtyFields } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as unknown as Resolver<ProductFormData>,
-    defaultValues: { name: "", description: "", price: 0, wholesalePrice: 0, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" },
+    defaultValues: { name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" },
   });
 
   const weightGrams = watch('weightGrams');
@@ -73,6 +74,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
         description: editingProduct.description ?? "",
         price: editingProduct.price,
         wholesalePrice: editingProduct.wholesalePrice ?? 0,
+        wholesaleMinQuantity: editingProduct.wholesaleMinQuantity ?? 1,
         weightGrams: editingProduct.weightGrams ?? 0,
         printHours: editingProduct.printHours ?? 0,
         wholesaleEnabled: editingProduct.wholesaleEnabled ?? false,
@@ -84,7 +86,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
       setSelectedImage(null);
       setCategoryQuery(editingProduct.category?.name ?? "");
     } else {
-      reset({ name: "", description: "", price: 0, wholesalePrice: 0, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" });
+      reset({ name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" });
       setPreviewUrl("");
       setSelectedImage(null);
       setCategoryQuery("");
@@ -101,7 +103,11 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
     if (wholesaleEnabled && !dirtyFields.wholesalePrice) {
       setValue('wholesalePrice', pricing.wholesalePrice, { shouldDirty: false, shouldTouch: false, shouldValidate: true });
     }
-  }, [dirtyFields.price, dirtyFields.wholesalePrice, editingProduct, pricing.retailPrice, pricing.wholesalePrice, setValue, wholesaleEnabled]);
+
+    if (wholesaleEnabled && !dirtyFields.wholesaleMinQuantity) {
+      setValue('wholesaleMinQuantity', 1, { shouldDirty: false, shouldTouch: false, shouldValidate: true });
+    }
+  }, [dirtyFields.price, dirtyFields.wholesalePrice, dirtyFields.wholesaleMinQuantity, editingProduct, pricing.retailPrice, pricing.wholesalePrice, setValue, wholesaleEnabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -164,6 +170,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
       payload.append('wholesaleEnabled', String(Boolean(data.wholesaleEnabled)));
       if (data.wholesaleEnabled) {
         payload.append('wholesalePrice', String(data.wholesalePrice ?? pricing.wholesalePrice));
+        payload.append('wholesaleMinQuantity', String(data.wholesaleMinQuantity ?? 1));
       }
       payload.append('stock', String(data.stock));
       if (data.description?.trim()) payload.append('description', data.description.trim());
@@ -259,6 +266,20 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
             </div>
 
             <div>
+              <label className="mb-1 block text-sm" htmlFor="wholesaleMinQuantity">Atacado a partir de</label>
+              <input
+                id="wholesaleMinQuantity"
+                className="input-base"
+                type="number"
+                min={1}
+                step="1"
+                disabled={!wholesaleEnabled}
+                {...register("wholesaleMinQuantity")}
+              />
+              {errors.wholesaleMinQuantity && <p className="mt-1 text-xs text-red-600">{errors.wholesaleMinQuantity.message}</p>}
+            </div>
+
+            <div>
               <label className="mb-1 block text-sm" htmlFor="stock">Estoque</label>
               <input id="stock" className="input-base" type="number" {...register("stock")} />
               {errors.stock && <p className="mt-1 text-xs text-red-600">{errors.stock.message}</p>}
@@ -297,7 +318,11 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
                 <div className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 ${wholesaleEnabled ? '' : 'opacity-80'}`}>
                   <div className="text-xs uppercase tracking-wide text-slate-500">Atacado sugerido</div>
                   <div className="mt-1 text-2xl font-semibold text-[var(--color-text)]">{formatBRL(pricing.wholesalePrice)}</div>
-                  <div className="mt-2 text-xs text-slate-500">Fica disponível quando a venda no atacado estiver ativada.</div>
+                  <div className="mt-2 text-xs text-slate-500">
+                    Fica disponível quando a venda no atacado estiver ativada.
+                    <br />
+                    Quantidade mínima atual: {wholesaleEnabled ? `${watch('wholesaleMinQuantity') ?? 1} peças` : 'desativado'}.
+                  </div>
                 </div>
               </div>
             </div>

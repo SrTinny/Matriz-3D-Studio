@@ -55,6 +55,7 @@ const productSelect = {
   description: true,
   price: true,
   wholesalePrice: true,
+  wholesaleMinQuantity: true,
   weightGrams: true,
   printHours: true,
   wholesaleEnabled: true,
@@ -74,6 +75,7 @@ const createProductSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().finite('preço inválido'),
   wholesalePrice: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
+  wholesaleMinQuantity: z.coerce.number().int().positive().optional(),
   weightGrams: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().default(0)),
   printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().default(0)),
   wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().default(false)),
@@ -91,6 +93,7 @@ const updateProductSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().finite().optional(),
   wholesalePrice: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
+  wholesaleMinQuantity: z.coerce.number().int().positive().optional(),
   weightGrams: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().optional()),
@@ -168,6 +171,7 @@ export async function listProducts(req: Request, res: Response) {
     description: string | null
     price: number
     wholesalePrice: number | null
+    wholesaleMinQuantity: number | null
     weightGrams: number | null
     printHours: number | null
     wholesaleEnabled: boolean
@@ -273,6 +277,7 @@ export async function createProduct(req: Request, res: Response) {
       slug: slugify(data.name),
       price: data.price,
       wholesalePrice: data.wholesaleEnabled ? data.wholesalePrice ?? null : null,
+      wholesaleMinQuantity: data.wholesaleEnabled ? data.wholesaleMinQuantity ?? 1 : null,
       weightGrams: data.weightGrams,
       printHours: data.printHours,
       wholesaleEnabled: data.wholesaleEnabled,
@@ -316,6 +321,7 @@ export async function updateProduct(req: Request, res: Response) {
     name?: string
     price?: number
     wholesalePrice?: number | null
+    wholesaleMinQuantity?: number | null
     weightGrams?: number | null
     printHours?: number | null
     wholesaleEnabled?: boolean
@@ -333,11 +339,13 @@ export async function updateProduct(req: Request, res: Response) {
   }
   if (patch.price !== undefined) data.price = patch.price
   if (patch.wholesalePrice !== undefined) data.wholesalePrice = patch.wholesalePrice
+  if (patch.wholesaleMinQuantity !== undefined) data.wholesaleMinQuantity = patch.wholesaleMinQuantity
   if (patch.weightGrams !== undefined) data.weightGrams = patch.weightGrams
   if (patch.printHours !== undefined) data.printHours = patch.printHours
   if (patch.wholesaleEnabled !== undefined) {
     data.wholesaleEnabled = patch.wholesaleEnabled
     if (patch.wholesaleEnabled === false) data.wholesalePrice = null
+    if (patch.wholesaleEnabled === false) data.wholesaleMinQuantity = null
   }
   if (patch.stock !== undefined) data.stock = patch.stock
   if (patch.description !== undefined) data.description = patch.description ?? null

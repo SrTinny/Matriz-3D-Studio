@@ -51,7 +51,7 @@ export default function ProductTableRow({ product, onEdit, onRemove, removingId,
         />
         <div className="mt-1 text-xs text-slate-500">
           {product.wholesaleEnabled && typeof product.wholesalePrice === 'number'
-            ? `Atacado: ${formatBRL(product.wholesalePrice)}`
+            ? `Atacado: ${formatBRL(product.wholesalePrice)}${typeof product.wholesaleMinQuantity === 'number' ? ` · mínimo ${product.wholesaleMinQuantity} peças` : ''}`
             : 'Atacado desativado'}
         </div>
       </td>
@@ -76,7 +76,9 @@ export default function ProductTableRow({ product, onEdit, onRemove, removingId,
             {typeof product.printHours === 'number' ? `${product.printHours.toFixed(1)}h` : 'Horas não informadas'}
           </div>
           <div className={product.wholesaleEnabled ? 'text-xs text-emerald-600' : 'text-xs text-slate-500'}>
-            {product.wholesaleEnabled ? 'Venda no atacado ativada' : 'Venda no atacado desativada'}
+            {product.wholesaleEnabled
+              ? `Venda no atacado ativada${typeof product.wholesaleMinQuantity === 'number' ? ` · mínimo ${product.wholesaleMinQuantity} peças` : ''}`
+              : 'Venda no atacado desativada'}
           </div>
         </div>
       </td>

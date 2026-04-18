@@ -49,7 +49,11 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
               {product.category?.name && <span>{product.category.name}</span>}
               {typeof product.weightGrams === 'number' && <span>{product.weightGrams.toFixed(0)}g</span>}
               {typeof product.printHours === 'number' && <span>{product.printHours.toFixed(1)}h</span>}
-              <span className={product.wholesaleEnabled ? 'text-emerald-600' : 'text-slate-500'}>{product.wholesaleEnabled ? 'Atacado ativo' : 'Atacado inativo'}</span>
+              <span className={product.wholesaleEnabled ? 'text-emerald-600 font-medium' : 'text-slate-500'}>
+                {product.wholesaleEnabled
+                  ? `Atacado a partir de ${product.wholesaleMinQuantity ?? 1} peças`
+                  : 'Atacado inativo'}
+              </span>
             </div>
           </div>
           <span className={"text-sm text-slate-600 dark:text-slate-300 " + (compact ? 'text-xs' : '')}>{formatDate(product.updatedAt ?? product.createdAt)}</span>
@@ -69,6 +73,7 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
           {product.wholesaleEnabled && typeof product.wholesalePrice === 'number' && (
             <span className={"mt-1 text-sm text-slate-600 dark:text-slate-300 " + (compact ? 'text-xs' : 'text-sm')} style={{ color: 'var(--color-text)' }}>
               Atacado: <strong>{formatBRL(product.wholesalePrice)}</strong>
+              {typeof product.wholesaleMinQuantity === 'number' ? ` · mínimo ${product.wholesaleMinQuantity} peças` : ''}
             </span>
           )}
           <span className={"text-sm text-slate-600 dark:text-slate-300 " + (compact ? 'text-xs mt-0.5' : 'text-sm mt-0.5')} style={{ color: 'var(--color-text)' }}>Estoque: <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'color-mix(in oklab, var(--color-brand), white 85%)', color: 'var(--color-brand)' }}>{product.stock}</span></span>
