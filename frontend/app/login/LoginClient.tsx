@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { mergeGuestCartToServer } from '@/lib/cart';
 import { setCurrentUser } from '@/lib/auth';
 import { setCsrfToken } from '@/lib/api';
+import { setAuthSessionHint } from '@/lib/auth-store';
 import logo from '../../assets/logo.png';
 import Link from 'next/link';
 
@@ -40,6 +41,7 @@ export default function LoginPage() {
       setCsrfToken(res.data?.csrfToken ?? null);
       if (user) {
         setCurrentUser(user);
+        setAuthSessionHint(true);
         toast.success("Login efetuado!");
         // tentar mesclar guest cart antes de redirecionar
         try {

@@ -57,6 +57,11 @@ function isUnsafeMethod(method?: string) {
   return normalized === "POST" || normalized === "PUT" || normalized === "PATCH" || normalized === "DELETE";
 }
 
+function isSafeMethod(method?: string) {
+  const normalized = method?.toUpperCase() ?? "GET";
+  return normalized === "GET" || normalized === "HEAD" || normalized === "OPTIONS";
+}
+
 function isPublicAuthRequest(url?: string) {
   const path = getRequestPath(url);
   return path === "/auth/login" || path === "/auth/register" || path === "/auth/activate" || path.startsWith("/auth/activate/");
@@ -154,9 +159,10 @@ api.interceptors.response.use(
 
     const isTimeout = error.code === "ECONNABORTED";   // timeout do axios
     const noResponse = !error.response;               // DNS, rede, CORS, etc.
-    const shouldRetryStatus = status === 429; // apenas limite de taxa
+    const shouldRetryStatus = status === 429 || status === 502 || status === 503 || status === 504;
+    const canRetryMethod = isSafeMethod(cfg.method);
 
-    if ((isTimeout || noResponse || shouldRetryStatus) && (cfg._retryCount ?? 0) < MAX_RETRIES) {
+    if ((isTimeout || noResponse || shouldRetryStatus) && canRetryMethod && (cfg._retryCount ?? 0) < MAX_RETRIES) {
       cfg._retryCount = (cfg._retryCount ?? 0) + 1;
 
       // backoff exponencial: 400ms, 800ms, 1600ms...

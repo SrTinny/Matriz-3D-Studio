@@ -3,6 +3,7 @@ import { api, clearCsrfToken, setCsrfToken } from "./api";
 import {
   clearCachedAuthUser,
   getCachedAuthUser,
+  setAuthSessionHint,
   setCachedAuthUser,
   type AuthUser,
 } from "./auth-store";
@@ -35,6 +36,7 @@ export async function hydrateSession(force = false): Promise<AuthUser | null> {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         clearCsrfToken();
         clearCachedAuthUser();
+        setAuthSessionHint(false);
         return null;
       }
 
@@ -74,5 +76,6 @@ export async function logout() {
   } finally {
     clearCsrfToken();
     clearCachedAuthUser();
+    setAuthSessionHint(false);
   }
 }

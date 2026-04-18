@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { getCurrentUser, hydrateSession, logout } from "@/lib/auth";
-import { AUTH_CHANGED_EVENT, type AuthUser } from "@/lib/auth-store";
+import { AUTH_CHANGED_EVENT, hasAuthSessionHint, type AuthUser } from "@/lib/auth-store";
 import { api } from '@/lib/api';
 import DesktopNav from './DesktopNav';
 import MobileNav from './MobileNav';
@@ -66,6 +66,14 @@ export default function HeaderBar() {
     let mounted = true;
 
     void (async () => {
+      if (!hasAuthSessionHint()) {
+        if (mounted) {
+          applyAuthState(null);
+          setReady(true);
+        }
+        return;
+      }
+
       const user = await hydrateSession();
       if (!mounted) return;
       applyAuthState(user);
@@ -105,6 +113,11 @@ export default function HeaderBar() {
   useEffect(() => {
     let mounted = true;
     async function load() {
+      if (!hasAuthSessionHint()) {
+        if (mounted) setCartCount(0);
+        return;
+      }
+
       try {
         const user = await hydrateSession();
         if (!user) {
