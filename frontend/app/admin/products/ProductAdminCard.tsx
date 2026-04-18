@@ -3,29 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-
-type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  createdAt?: string;
-  updatedAt?: string;
-  imageUrl?: string | null;
-  category?: { id: string; name: string } | null;
-};
+import type { AdminProduct } from './productTypes';
+import { formatBRL } from './pricing';
 
 type Props = {
-  product: Product;
-  onEdit: (p: Product) => void;
+  product: AdminProduct;
+  onEdit: (p: AdminProduct) => void;
   onRemove: (id: string) => void;
   removingId?: string | null;
   compact?: boolean;
 };
-
-const formatBRL = (n: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 
 const formatDate = (iso?: string) => {
   if (!iso) return "—";
@@ -56,9 +43,14 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
 
       <Link href={`/products/${product.id}`} className="no-underline text-inherit flex flex-col flex-grow min-h-0">
         <div className={"flex flex-col " + (compact ? 'gap-1' : 'sm:flex-row sm:items-start sm:justify-between gap-2') + " min-h-0"}>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-1">
             <h3 className={"font-semibold leading-tight " + (compact ? 'text-sm line-clamp-2' : '')} title={product.name}>{product.name}</h3>
-            {product.category?.name && <span className="text-xs text-slate-500 dark:text-slate-400">{product.category.name}</span>}
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+              {product.category?.name && <span>{product.category.name}</span>}
+              {typeof product.weightGrams === 'number' && <span>{product.weightGrams.toFixed(0)}g</span>}
+              {typeof product.printHours === 'number' && <span>{product.printHours.toFixed(1)}h</span>}
+              <span className={product.wholesaleEnabled ? 'text-emerald-600' : 'text-slate-500'}>{product.wholesaleEnabled ? 'Atacado ativo' : 'Atacado inativo'}</span>
+            </div>
           </div>
           <span className={"text-sm text-slate-600 dark:text-slate-300 " + (compact ? 'text-xs' : '')}>{formatDate(product.updatedAt ?? product.createdAt)}</span>
         </div>
@@ -74,6 +66,11 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
       <div className={"mt-2 " + (compact ? 'flex flex-col items-start gap-2' : 'flex items-center justify-between')}>
         <div className="flex flex-col">
           <span className={"text-brand font-semibold " + (compact ? 'text-sm' : '')} style={{ color: 'var(--color-brand)' }}>{formatBRL(product.price)}</span>
+          {product.wholesaleEnabled && typeof product.wholesalePrice === 'number' && (
+            <span className={"mt-1 text-sm text-slate-600 dark:text-slate-300 " + (compact ? 'text-xs' : 'text-sm')} style={{ color: 'var(--color-text)' }}>
+              Atacado: <strong>{formatBRL(product.wholesalePrice)}</strong>
+            </span>
+          )}
           <span className={"text-sm text-slate-600 dark:text-slate-300 " + (compact ? 'text-xs mt-0.5' : 'text-sm mt-0.5')} style={{ color: 'var(--color-text)' }}>Estoque: <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'color-mix(in oklab, var(--color-brand), white 85%)', color: 'var(--color-brand)' }}>{product.stock}</span></span>
         </div>
 

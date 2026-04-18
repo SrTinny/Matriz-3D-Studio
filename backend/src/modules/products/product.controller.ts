@@ -32,12 +32,51 @@ function looksLikeUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
+function parseBooleanLike(value: unknown) {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (['true', '1', 'on', 'yes'].includes(normalized)) return true
+    if (['false', '0', 'off', 'no', ''].includes(normalized)) return false
+  }
+  return value
+}
+
+function numberOrUndefined(value: unknown) {
+  if (value === null || value === undefined) return undefined
+  if (typeof value === 'string' && value.trim() === '') return undefined
+  return value
+}
+
+const productSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  description: true,
+  price: true,
+  wholesalePrice: true,
+  weightGrams: true,
+  printHours: true,
+  wholesaleEnabled: true,
+  stock: true,
+  imageUrl: true,
+  tag: true,
+  categoryId: true,
+  category: { select: { id: true, name: true } },
+  createdAt: true,
+  updatedAt: true,
+} as const
+
 /* ========= Schemas ========= */
 // use z.coerce para aceitar strings vindas do front
 const createProductSchema = z.object({
   name: z.string().min(1, 'nome obrigatório'),
   description: z.string().optional(),
   price: z.coerce.number().finite('preço inválido'),
+  wholesalePrice: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
+  weightGrams: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().default(0)),
+  printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().default(0)),
+  wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().default(false)),
   stock: z.coerce.number().int().nonnegative().default(0),
   imageUrl: z.preprocess(emptyToUndefined, z.string().url('URL inválida').optional())
   ,
@@ -51,6 +90,10 @@ const updateProductSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   price: z.coerce.number().finite().optional(),
+  wholesalePrice: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
+  weightGrams: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
+  printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
+  wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().optional()),
   stock: z.coerce.number().int().nonnegative().optional(),
   imageUrl: z.preprocess(emptyToUndefined, z.string().url('URL inválida').nullable().optional())
   ,
@@ -124,6 +167,10 @@ export async function listProducts(req: Request, res: Response) {
     slug: string
     description: string | null
     price: number
+    wholesalePrice: number | null
+    weightGrams: number | null
+    printHours: number | null
+    wholesaleEnabled: boolean
     stock: number
     imageUrl: string | null
     tag: ProductTag | null
@@ -141,20 +188,7 @@ export async function listProducts(req: Request, res: Response) {
   if (sort === 'name_asc' || sort === 'name_desc') {
     const all = await prisma.product.findMany({
       where,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        price: true,
-        stock: true,
-        imageUrl: true,
-        tag: true,
-        categoryId: true,
-        category: { select: { id: true, name: true } },
-        createdAt: true,
-        updatedAt: true,
-      }
+      select: productSelect,
     })
     total = all.length
     all.sort((a, b) => {
@@ -170,20 +204,7 @@ export async function listProducts(req: Request, res: Response) {
         skip: (page - 1) * perPage,
         take: perPage,
         orderBy,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          price: true,
-          stock: true,
-          imageUrl: true,
-          tag: true,
-          categoryId: true,
-          category: { select: { id: true, name: true } },
-          createdAt: true,
-          updatedAt: true,
-        }
+        select: productSelect,
       }),
       prisma.product.count({ where }),
     ])
@@ -206,20 +227,7 @@ export async function getProduct(req: Request, res: Response) {
 
   const product = await prisma.product.findUnique({
     where: { id: String(id) },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      description: true,
-      price: true,
-      stock: true,
-      imageUrl: true,
-      tag: true,
-      categoryId: true,
-      category: { select: { id: true, name: true } },
-      createdAt: true,
-      updatedAt: true,
-    }
+    select: productSelect,
   })
 
   if (!product) return res.status(404).json({ message: 'Produto não encontrado' })
@@ -264,6 +272,10 @@ export async function createProduct(req: Request, res: Response) {
       name: data.name,
       slug: slugify(data.name),
       price: data.price,
+      wholesalePrice: data.wholesaleEnabled ? data.wholesalePrice ?? null : null,
+      weightGrams: data.weightGrams,
+      printHours: data.printHours,
+      wholesaleEnabled: data.wholesaleEnabled,
       stock: data.stock ?? 0,
       description: data.description ?? null,
       imageUrl: uploadedImageUrl ?? data.imageUrl ?? null,
@@ -271,20 +283,8 @@ export async function createProduct(req: Request, res: Response) {
     }
     if (categoryId) createData.categoryId = categoryId
 
-    const created = await prisma.product.create({ data: createData, select: {
-      id: true,
-      name: true,
-      slug: true,
-      description: true,
-      price: true,
-      stock: true,
-      imageUrl: true,
-      tag: true,
-      categoryId: true,
-      category: { select: { id: true, name: true } },
-      createdAt: true,
-      updatedAt: true,
-    } })
+    const created = await prisma.product.create({ data: createData, select: productSelect })
+
     res.status(201).json({
       ...created,
       categoryName: created.category?.name ?? null,
@@ -315,6 +315,10 @@ export async function updateProduct(req: Request, res: Response) {
   const data: {
     name?: string
     price?: number
+    wholesalePrice?: number | null
+    weightGrams?: number | null
+    printHours?: number | null
+    wholesaleEnabled?: boolean
     stock?: number
     description?: string | null
     imageUrl?: string | null
@@ -328,6 +332,13 @@ export async function updateProduct(req: Request, res: Response) {
     data.slug = slugify(patch.name)
   }
   if (patch.price !== undefined) data.price = patch.price
+  if (patch.wholesalePrice !== undefined) data.wholesalePrice = patch.wholesalePrice
+  if (patch.weightGrams !== undefined) data.weightGrams = patch.weightGrams
+  if (patch.printHours !== undefined) data.printHours = patch.printHours
+  if (patch.wholesaleEnabled !== undefined) {
+    data.wholesaleEnabled = patch.wholesaleEnabled
+    if (patch.wholesaleEnabled === false) data.wholesalePrice = null
+  }
   if (patch.stock !== undefined) data.stock = patch.stock
   if (patch.description !== undefined) data.description = patch.description ?? null
   if (uploadedImageUrl) data.imageUrl = uploadedImageUrl
@@ -369,20 +380,7 @@ export async function updateProduct(req: Request, res: Response) {
     const updated = await prisma.product.update({
       where: { id: String(id) },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        price: true,
-        stock: true,
-        imageUrl: true,
-        tag: true,
-        categoryId: true,
-        category: { select: { id: true, name: true } },
-        createdAt: true,
-        updatedAt: true,
-      }
+      select: productSelect,
     })
     res.json({
       ...updated,

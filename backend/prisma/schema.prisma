@@ -84,6 +84,10 @@ model Product {
   slug        String     @unique      // <- chave única p/ upsert/skipDuplicates
   description String?
   price       Float
+  wholesalePrice Float?
+  weightGrams Float?
+  printHours  Float?
+  wholesaleEnabled Boolean @default(false)
   stock       Int        @default(0)
   imageUrl    String?
   tag         ProductTag?

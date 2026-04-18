@@ -3,21 +3,12 @@
 import Image from "next/image";
 import React, { useState } from "react";
 import InlineEditCell from './InlineEditCell';
-
-type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  createdAt?: string;
-  updatedAt?: string;
-  imageUrl?: string | null;
-};
+import type { AdminProduct } from './productTypes';
+import { formatBRL } from './pricing';
 
 type Props = {
-  product: Product;
-  onEdit: (p: Product) => void;
+  product: AdminProduct;
+  onEdit: (p: AdminProduct) => void;
   onRemove: (id: string) => void;
   removingId?: string | null;
   onSavePrice?: (id: string, newPrice: number) => Promise<void>;
@@ -53,11 +44,16 @@ export default function ProductTableRow({ product, onEdit, onRemove, removingId,
         <InlineEditCell
           value={product.price}
           inputType="number"
-          displayFormatter={(v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v))}
+          displayFormatter={(v) => formatBRL(Number(v))}
           onSave={async (newVal) => {
             if (onSavePrice) await onSavePrice(product.id, Number(newVal));
           }}
         />
+        <div className="mt-1 text-xs text-slate-500">
+          {product.wholesaleEnabled && typeof product.wholesalePrice === 'number'
+            ? `Atacado: ${formatBRL(product.wholesalePrice)}`
+            : 'Atacado desativado'}
+        </div>
       </td>
       <td className="p-3">
         <InlineEditCell
@@ -71,7 +67,19 @@ export default function ProductTableRow({ product, onEdit, onRemove, removingId,
       <td className="hidden p-3 text-slate-600 dark:text-slate-300 lg:table-cell">
         {formatDate(product.updatedAt ?? product.createdAt)}
       </td>
-      <td className="hidden p-3 text-slate-600 dark:text-slate-300 lg:table-cell">{product.description ?? "—"}</td>
+      <td className="hidden p-3 text-slate-600 dark:text-slate-300 lg:table-cell">
+        <div className="space-y-1">
+          <div>{product.description ?? "—"}</div>
+          <div className="text-xs text-slate-500">
+            {typeof product.weightGrams === 'number' ? `${product.weightGrams.toFixed(0)}g` : 'Peso não informado'}
+            {' '}•{' '}
+            {typeof product.printHours === 'number' ? `${product.printHours.toFixed(1)}h` : 'Horas não informadas'}
+          </div>
+          <div className={product.wholesaleEnabled ? 'text-xs text-emerald-600' : 'text-xs text-slate-500'}>
+            {product.wholesaleEnabled ? 'Venda no atacado ativada' : 'Venda no atacado desativada'}
+          </div>
+        </div>
+      </td>
       <td className="p-3">
         <div className="flex justify-end gap-2 flex-col sm:flex-row">
           <button

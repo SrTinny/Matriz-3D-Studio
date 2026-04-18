@@ -10,30 +10,20 @@ import ProductAdminCard from './ProductAdminCard';
 import ProductTableRow from './ProductTableRow';
 import DashboardStats from './DashboardStats';
 import PaginationControls from './PaginationControls';
-
-type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  createdAt?: string;
-  updatedAt?: string;
-  imageUrl?: string | null;
-};
+import type { AdminProduct } from './productTypes';
 
 /* helpers removed: moved to row/card components */
 
 export default function AdminProductsPage() {
   const [ready, setReady] = useState(false);
-  const [items, setItems] = useState<Product[]>([]);
+  const [items, setItems] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [perPage, setPerPage] = useState(50);
   const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<Product | null>(null);
+  const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -105,7 +95,7 @@ export default function AdminProductsPage() {
       const res = await api.get("/products", {
         params: { page, perPage, search: debouncedSearch || undefined },
       });
-      const items = (res.data?.items ?? []) as Product[];
+      const items = (res.data?.items ?? []) as AdminProduct[];
       const totalItems = Number(res.data?.totalItems ?? res.data?.total ?? items.length ?? 0);
       const totalPages = Number(
         res.data?.totalPages ??
@@ -150,7 +140,7 @@ export default function AdminProductsPage() {
     setModalOpen(true);
   }
 
-  function startEdit(p: Product) {
+  function startEdit(p: AdminProduct) {
     setEditing(p);
     setModalOpen(true);
   }
@@ -235,7 +225,7 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-brand">Admin • Produtos</h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Gerencie catálogo, preços e estoque.
+            Gerencie catálogo, varejo, atacado e estoque.
           </p>
         </div>
       </header>

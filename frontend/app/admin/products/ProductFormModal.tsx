@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
@@ -9,23 +9,23 @@ import { api } from "@/lib/api";
 import axios from "axios";
 import { toast } from "sonner";
 
-type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  createdAt?: string;
-  updatedAt?: string;
-  imageUrl?: string | null;
-  tag?: string | null;
-  category?: { id: string; name: string } | null;
-};
+import type { AdminProduct } from './productTypes';
+import { calculatePricingSuggestion, formatBRL } from './pricing';
+
+function emptyToUndefined(value: unknown) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
 
 const productSchema = z.object({
   name: z.string().min(1, "Nome obrigatório"),
   description: z.string().optional(),
   price: z.coerce.number().nonnegative("Preço inválido"),
+  wholesalePrice: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative().optional()),
+  weightGrams: z.coerce.number().nonnegative("Peso inválido").default(0),
+  printHours: z.coerce.number().nonnegative("Horas inválidas").default(0),
+  wholesaleEnabled: z.boolean().default(false),
   stock: z.coerce.number().int("Estoque deve ser inteiro").nonnegative("Estoque inválido"),
   tag: z.enum(["PROMOCAO", "NOVO"]).optional(),
   categoryName: z.string().optional().nullable(),
@@ -36,7 +36,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onSaveSuccess: () => void;
-  editingProduct: Product | null;
+  editingProduct: AdminProduct | null;
 };
 
 export default function ProductFormModal({ open, onClose, onSaveSuccess, editingProduct }: Props) {
@@ -47,12 +47,20 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
   const [suggestionsVisible, setSuggestionsVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [categoryQuery, setCategoryQuery] = useState("");
-  
 
-  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting, dirtyFields } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as unknown as Resolver<ProductFormData>,
-    defaultValues: { name: "", description: "", price: 0, stock: 0 },
+    defaultValues: { name: "", description: "", price: 0, wholesalePrice: 0, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" },
   });
+
+  const weightGrams = watch('weightGrams');
+  const printHours = watch('printHours');
+  const wholesaleEnabled = watch('wholesaleEnabled');
+
+  const pricing = useMemo(
+    () => calculatePricingSuggestion({ weightGrams: Number(weightGrams ?? 0), printHours: Number(printHours ?? 0) }),
+    [weightGrams, printHours],
+  );
 
   const filteredCategories = allCategories
     .filter((c) => (c.name || '').toLowerCase().includes(categoryQuery.toLowerCase()))
@@ -64,20 +72,36 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
         name: editingProduct.name,
         description: editingProduct.description ?? "",
         price: editingProduct.price,
+        wholesalePrice: editingProduct.wholesalePrice ?? 0,
+        weightGrams: editingProduct.weightGrams ?? 0,
+        printHours: editingProduct.printHours ?? 0,
+        wholesaleEnabled: editingProduct.wholesaleEnabled ?? false,
         stock: editingProduct.stock,
-  tag: editingProduct.tag === 'Promoção' ? 'PROMOCAO' : editingProduct.tag === 'Novo' ? 'NOVO' : undefined,
-  categoryName: editingProduct.category?.name ?? null,
+        tag: editingProduct.tag === 'Promoção' ? 'PROMOCAO' : editingProduct.tag === 'Novo' ? 'NOVO' : undefined,
+        categoryName: editingProduct.category?.name ?? null,
       });
       setPreviewUrl(editingProduct.imageUrl ?? "");
       setSelectedImage(null);
       setCategoryQuery(editingProduct.category?.name ?? "");
     } else {
-      reset({ name: "", description: "", price: 0, stock: 0, categoryName: "" });
+      reset({ name: "", description: "", price: 0, wholesalePrice: 0, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" });
       setPreviewUrl("");
       setSelectedImage(null);
       setCategoryQuery("");
     }
   }, [editingProduct, reset]);
+
+  useEffect(() => {
+    if (editingProduct) return;
+
+    if (!dirtyFields.price) {
+      setValue('price', pricing.retailPrice, { shouldDirty: false, shouldTouch: false, shouldValidate: true });
+    }
+
+    if (wholesaleEnabled && !dirtyFields.wholesalePrice) {
+      setValue('wholesalePrice', pricing.wholesalePrice, { shouldDirty: false, shouldTouch: false, shouldValidate: true });
+    }
+  }, [dirtyFields.price, dirtyFields.wholesalePrice, editingProduct, pricing.retailPrice, pricing.wholesalePrice, setValue, wholesaleEnabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -134,7 +158,13 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
       setSaving(true);
       const payload = new FormData();
       payload.append('name', data.name);
-      payload.append('price', String(data.price));
+      payload.append('price', String(Number.isFinite(data.price) ? data.price : pricing.retailPrice));
+      payload.append('weightGrams', String(data.weightGrams ?? 0));
+      payload.append('printHours', String(data.printHours ?? 0));
+      payload.append('wholesaleEnabled', String(Boolean(data.wholesaleEnabled)));
+      if (data.wholesaleEnabled) {
+        payload.append('wholesalePrice', String(data.wholesalePrice ?? pricing.wholesalePrice));
+      }
       payload.append('stock', String(data.stock));
       if (data.description?.trim()) payload.append('description', data.description.trim());
       if (data.tag) payload.append('tag', data.tag);
@@ -193,15 +223,83 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
             </div>
 
             <div>
-              <label className="mb-1 block text-sm" htmlFor="price">Preço</label>
+              <label className="mb-1 block text-sm" htmlFor="price">Preço varejo</label>
               <input id="price" className="input-base" type="number" step="0.01" {...register("price")} />
               {errors.price && <p className="mt-1 text-xs text-red-600">{errors.price.message}</p>}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm" htmlFor="weightGrams">Peso da peça (g)</label>
+              <input id="weightGrams" className="input-base" type="number" step="0.01" {...register("weightGrams")} />
+              {errors.weightGrams && <p className="mt-1 text-xs text-red-600">{errors.weightGrams.message}</p>}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm" htmlFor="printHours">Horas de impressão</label>
+              <input id="printHours" className="input-base" type="number" step="0.01" {...register("printHours")} />
+              {errors.printHours && <p className="mt-1 text-xs text-red-600">{errors.printHours.message}</p>}
+            </div>
+
+            <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] px-4 py-3">
+              <input id="wholesaleEnabled" type="checkbox" className="h-4 w-4 rounded border-slate-300" {...register("wholesaleEnabled")} />
+              <label htmlFor="wholesaleEnabled" className="text-sm font-medium">Vender no atacado</label>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm" htmlFor="wholesalePrice">Preço atacado</label>
+              <input
+                id="wholesalePrice"
+                className="input-base"
+                type="number"
+                step="0.01"
+                disabled={!wholesaleEnabled}
+                {...register("wholesalePrice")}
+              />
+              {errors.wholesalePrice && <p className="mt-1 text-xs text-red-600">{errors.wholesalePrice.message}</p>}
             </div>
 
             <div>
               <label className="mb-1 block text-sm" htmlFor="stock">Estoque</label>
               <input id="stock" className="input-base" type="number" {...register("stock")} />
               {errors.stock && <p className="mt-1 text-xs text-red-600">{errors.stock.message}</p>}
+            </div>
+
+            <div className="sm:col-span-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--color-text)]">Sugestão de precificação</h3>
+                  <p className="text-xs text-slate-500">O cálculo usa peso, horas de impressão, custo de produção e margem de referência.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="btn btn-outline px-3 py-2 text-xs" onClick={() => setValue("price", pricing.retailPrice, { shouldDirty: true, shouldValidate: true })}>
+                    Usar varejo sugerido
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline px-3 py-2 text-xs"
+                    onClick={() => {
+                      setValue("wholesaleEnabled", true, { shouldDirty: true, shouldValidate: true });
+                      setValue("wholesalePrice", pricing.wholesalePrice, { shouldDirty: true, shouldValidate: true });
+                    }}
+                  >
+                    Usar atacado sugerido
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Varejo sugerido</div>
+                  <div className="mt-1 text-2xl font-semibold text-[var(--color-text)]">{formatBRL(pricing.retailPrice)}</div>
+                  <div className="mt-2 text-xs text-slate-500">Base de produção: {formatBRL(pricing.productionCost)}.</div>
+                </div>
+
+                <div className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 ${wholesaleEnabled ? '' : 'opacity-80'}`}>
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Atacado sugerido</div>
+                  <div className="mt-1 text-2xl font-semibold text-[var(--color-text)]">{formatBRL(pricing.wholesalePrice)}</div>
+                  <div className="mt-2 text-xs text-slate-500">Fica disponível quando a venda no atacado estiver ativada.</div>
+                </div>
+              </div>
             </div>
 
             <div className="sm:col-span-2">

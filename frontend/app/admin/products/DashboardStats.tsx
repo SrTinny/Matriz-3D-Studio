@@ -1,20 +1,10 @@
 "use client";
 
 import React from "react";
-
-type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  createdAt?: string;
-  updatedAt?: string;
-  imageUrl?: string | null;
-};
+import type { AdminProduct } from './productTypes';
 
 type Props = {
-  items: Product[];
+  items: AdminProduct[];
   loading?: boolean;
   onFilterOutOfStock?: () => void;
   activeFilter?: boolean;
