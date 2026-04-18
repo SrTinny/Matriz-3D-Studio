@@ -2,12 +2,13 @@ export const PRICING_DEFAULTS = {
   filamentPricePerGram: 0.08,
   machineConsumptionKw: 0.1,
   energyPricePerKwh: 1.1,
-  wearCostPerHour: 1,
-  technicalHourRate: 20,
-  retailMarkup: 2.8,
-  wholesaleMarkup: 2.1,
-  retailLaborHours: 0.25,
-  wholesaleLaborHours: 0.08,
+  wearCostPerHour: 0.9,
+  failureRate: 0.08,
+  technicalHourRate: 18,
+  retailMarkup: 2.6,
+  wholesaleMarkup: 2.0,
+  retailLaborHours: 0.2,
+  wholesaleLaborHours: 0.06,
 };
 
 export type PricingInput = {
@@ -35,7 +36,7 @@ export function calculatePricingSuggestion(input: PricingInput): PricingSuggesti
   const materialCost = weightGrams * PRICING_DEFAULTS.filamentPricePerGram;
   const energyCost = printHours * PRICING_DEFAULTS.machineConsumptionKw * PRICING_DEFAULTS.energyPricePerKwh;
   const depreciationCost = printHours * PRICING_DEFAULTS.wearCostPerHour;
-  const failureCost = (materialCost + energyCost + depreciationCost) * 0.1;
+  const failureCost = (materialCost + energyCost + depreciationCost) * PRICING_DEFAULTS.failureRate;
   const productionCost = materialCost + energyCost + depreciationCost + failureCost;
 
   const retailLabor = PRICING_DEFAULTS.technicalHourRate * PRICING_DEFAULTS.retailLaborHours;

@@ -10,6 +10,12 @@ type Product = {
   name: string;
   description?: string | null;
   price: number;
+  wholesalePrice?: number | null;
+  wholesaleEnabled?: boolean;
+  wholesaleMinQuantity?: number | null;
+  heightCm?: number | null;
+  weightGrams?: number | null;
+  printHours?: number | null;
   stock: number;
   imageUrl?: string | null;
   tag?: 'Promoção' | 'Novo';
@@ -64,7 +70,7 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
   return (
     <li className="card p-1 sm:p-2 md:p-3 flex flex-col gap-2 h-full group transform transition-transform duration-150 hover:scale-102 hover:shadow-md focus-within:scale-102 focus-within:shadow-md">
       <Link href={`/products/${product.slug}`} className="group-hover:no-underline"> 
-      <div className="relative w-full aspect-[4/3] sm:aspect-[3/2] lg:aspect-[4/3] xl:aspect-[3/2] 2xl:aspect-[4/3] overflow-hidden rounded-lg bg-black/5">
+      <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-black/5">
         {/* Badge for tag */}
         {product.tag && (
           <span
@@ -99,6 +105,14 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
         {product.category?.name && (
           <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{product.category.name}</div>
         )}
+        <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+          {typeof product.heightCm === 'number' && <span>Altura: {product.heightCm.toFixed(1)} cm</span>}
+          {product.wholesaleEnabled && (
+            <span className="text-emerald-600 font-medium">
+              Venda no atacado ativada · mínimo {product.wholesaleMinQuantity ?? 1} peças
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center justify-center flex-col gap-1 w-full">

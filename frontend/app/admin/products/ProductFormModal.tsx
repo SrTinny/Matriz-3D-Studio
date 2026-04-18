@@ -24,6 +24,7 @@ const productSchema = z.object({
   price: z.coerce.number().nonnegative("Preço inválido"),
   wholesalePrice: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative().optional()),
   wholesaleMinQuantity: z.coerce.number().int().positive("Informe ao menos 1 peça").default(1),
+  heightCm: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative("Altura inválida").optional()),
   weightGrams: z.coerce.number().nonnegative("Peso inválido").default(0),
   printHours: z.coerce.number().nonnegative("Horas inválidas").default(0),
   wholesaleEnabled: z.boolean().default(false),
@@ -44,14 +45,13 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
   const [saving, setSaving] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
-  const [allCategories, setAllCategories] = useState<{ id: string; name: string }[]>([]);
-  const [suggestionsVisible, setSuggestionsVisible] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [categoryQuery, setCategoryQuery] = useState("");
+  const [allCategories, setAllCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [newCategoryInput, setNewCategoryInput] = useState("");
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting, dirtyFields } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as unknown as Resolver<ProductFormData>,
-    defaultValues: { name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" },
+    defaultValues: { name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, heightCm: undefined, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" },
   });
 
   const weightGrams = watch('weightGrams');
@@ -63,9 +63,44 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
     [weightGrams, printHours],
   );
 
-  const filteredCategories = allCategories
-    .filter((c) => (c.name || '').toLowerCase().includes(categoryQuery.toLowerCase()))
-    .slice(0, 8);
+  const normalizeCategoryNames = (values: Array<string | null | undefined>) => {
+    const map = new Map<string, string>();
+
+    for (const value of values) {
+      const normalized = String(value ?? '').trim();
+      if (!normalized) continue;
+
+      const key = normalized.toLowerCase();
+      if (!map.has(key)) map.set(key, normalized);
+    }
+
+    return Array.from(map.values());
+  };
+
+  const toggleExistingCategory = (categoryName: string) => {
+    setSelectedCategories((prev) => {
+      const exists = prev.some((item) => item.toLowerCase() === categoryName.toLowerCase());
+      const next = exists
+        ? prev.filter((item) => item.toLowerCase() !== categoryName.toLowerCase())
+        : [...prev, categoryName];
+
+      setValue('categoryName', next[0] ?? '', { shouldDirty: true, shouldValidate: false });
+      return next;
+    });
+  };
+
+  const addNewCategoryToSelection = () => {
+    const nextCategory = newCategoryInput.trim();
+    if (!nextCategory) return;
+
+    setSelectedCategories((prev) => {
+      const next = normalizeCategoryNames([...prev, nextCategory]);
+      setValue('categoryName', next[0] ?? '', { shouldDirty: true, shouldValidate: false });
+      return next;
+    });
+
+    setNewCategoryInput("");
+  };
 
   useEffect(() => {
     if (editingProduct) {
@@ -75,23 +110,50 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
         price: editingProduct.price,
         wholesalePrice: editingProduct.wholesalePrice ?? 0,
         wholesaleMinQuantity: editingProduct.wholesaleMinQuantity ?? 1,
+        heightCm: editingProduct.heightCm ?? undefined,
         weightGrams: editingProduct.weightGrams ?? 0,
         printHours: editingProduct.printHours ?? 0,
         wholesaleEnabled: editingProduct.wholesaleEnabled ?? false,
         stock: editingProduct.stock,
         tag: editingProduct.tag === 'Promoção' ? 'PROMOCAO' : editingProduct.tag === 'Novo' ? 'NOVO' : undefined,
-        categoryName: editingProduct.category?.name ?? null,
+        categoryName: editingProduct.categoryNames?.[0] ?? editingProduct.category?.name ?? null,
       });
       setPreviewUrl(editingProduct.imageUrl ?? "");
       setSelectedImage(null);
-      setCategoryQuery(editingProduct.category?.name ?? "");
+      setSelectedCategories(
+        normalizeCategoryNames([
+          ...(editingProduct.categoryNames ?? []),
+          editingProduct.category?.name,
+        ]),
+      );
+      setNewCategoryInput("");
     } else {
-      reset({ name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" });
+      reset({ name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, heightCm: undefined, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" });
       setPreviewUrl("");
       setSelectedImage(null);
-      setCategoryQuery("");
+      setSelectedCategories([]);
+      setNewCategoryInput("");
     }
   }, [editingProduct, reset]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void (async () => {
+      try {
+        const res = await api.get('/categories');
+        if (!mounted) return;
+        setAllCategories(res.data ?? []);
+      } catch {
+        if (!mounted) return;
+        setAllCategories([]);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (editingProduct) return;
@@ -126,45 +188,20 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
     };
   }, [previewUrl]);
 
-  // fetch categories for autocomplete
-  useEffect(() => {
-    let mounted = true;
-    void (async () => {
-      try {
-        const res = await api.get('/categories');
-        if (!mounted) return;
-        setAllCategories(res.data ?? []);
-      } catch {}
-    })();
-
-    const onCategoriesChanged = (e: Event) => {
-      void (async () => {
-        try {
-          const res = await api.get('/categories');
-          if (!mounted) return;
-          setAllCategories(res.data ?? []);
-          // if event provides a detail with new category name, prefill it
-          try {
-            const detail = (e as CustomEvent).detail as string | undefined;
-            if (detail) {
-              reset((vals) => ({ ...vals, categoryName: detail }));
-              setCategoryQuery(detail);
-            }
-          } catch {}
-        } catch {}
-      })();
-    }
-    window.addEventListener('categories:changed', onCategoriesChanged as EventListener);
-
-    return () => { mounted = false; window.removeEventListener('categories:changed', onCategoriesChanged as EventListener); };
-  }, [reset]);
-
   async function onSubmit(data: ProductFormData) {
     try {
       setSaving(true);
       const payload = new FormData();
+      const categoryNames = normalizeCategoryNames([
+        ...selectedCategories,
+        data.categoryName,
+      ]);
+
       payload.append('name', data.name);
       payload.append('price', String(Number.isFinite(data.price) ? data.price : pricing.retailPrice));
+      if (typeof data.heightCm === 'number') {
+        payload.append('heightCm', String(data.heightCm));
+      }
       payload.append('weightGrams', String(data.weightGrams ?? 0));
       payload.append('printHours', String(data.printHours ?? 0));
       payload.append('wholesaleEnabled', String(Boolean(data.wholesaleEnabled)));
@@ -175,7 +212,8 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
       payload.append('stock', String(data.stock));
       if (data.description?.trim()) payload.append('description', data.description.trim());
       if (data.tag) payload.append('tag', data.tag);
-      if (data.categoryName?.trim()) payload.append('categoryName', data.categoryName.trim());
+      payload.append('categoryNames', JSON.stringify(categoryNames));
+      payload.append('categoryName', categoryNames[0] ?? '');
       if (selectedImage) payload.append('image', selectedImage);
 
       if (editingProduct) {
@@ -185,7 +223,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
         await api.post("/products", payload);
         toast.success("Produto criado");
       }
-      try { window.dispatchEvent(new CustomEvent('categories:changed', { detail: data.categoryName ?? undefined })); } catch {}
+      try { window.dispatchEvent(new CustomEvent('categories:changed', { detail: categoryNames[0] ?? undefined })); } catch {}
       onSaveSuccess();
     } catch (e: unknown) {
       let msg = editingProduct ? "Erro ao atualizar" : "Erro ao criar";
@@ -233,6 +271,12 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
               <label className="mb-1 block text-sm" htmlFor="price">Preço varejo</label>
               <input id="price" className="input-base" type="number" step="0.01" {...register("price")} />
               {errors.price && <p className="mt-1 text-xs text-red-600">{errors.price.message}</p>}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm" htmlFor="heightCm">Altura da peça (cm)</label>
+              <input id="heightCm" className="input-base" type="number" step="0.01" {...register("heightCm")} />
+              {errors.heightCm && <p className="mt-1 text-xs text-red-600">{errors.heightCm.message}</p>}
             </div>
 
             <div>
@@ -381,60 +425,91 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
               </select>
             </div>
 
-            <div className="relative">
-              <label className="mb-1 block text-sm" htmlFor="categoryName">Categoria</label>
-              <input
-                id="categoryName"
-                className="input-base"
-                {...register('categoryName')}
-                value={categoryQuery}
-                placeholder="ex: roupas, eletronicos"
-                onFocus={() => {
-                  setSuggestionsVisible(true);
-                  setActiveIndex(null);
-                }}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setCategoryQuery(next);
-                  setValue('categoryName', next);
-                }}
-                onBlur={() => setTimeout(() => setSuggestionsVisible(false), 150)}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown') {
-                    setActiveIndex((i) => (i === null ? 0 : Math.min(filteredCategories.length - 1, i + 1)));
-                    e.preventDefault();
-                  } else if (e.key === 'ArrowUp') {
-                    setActiveIndex((i) => (i === null ? Math.max(0, filteredCategories.length - 1) : Math.max(0, i - 1)));
-                    e.preventDefault();
-                  } else if (e.key === 'Enter') {
-                    if (activeIndex !== null && filteredCategories[activeIndex]) {
-                      const name = filteredCategories[activeIndex].name;
-                      setCategoryQuery(name);
-                      setValue('categoryName', name);
-                      setSuggestionsVisible(false);
-                      e.preventDefault();
-                    }
-                  }
-                }}
-              />
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm">Categorias existentes</label>
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] p-3">
+                {allCategories.length === 0 ? (
+                  <p className="text-xs text-slate-500">Nenhuma categoria cadastrada ainda.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {allCategories.map((categoryOption) => {
+                      const isSelected = selectedCategories.some(
+                        (item) => item.toLowerCase() === categoryOption.name.toLowerCase(),
+                      );
 
-              {suggestionsVisible && filteredCategories.length > 0 && (
-                <ul className="absolute left-0 right-0 z-50 mt-1 max-h-44 overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg">
-                  {filteredCategories.map((c, idx) => (
-                    <li
-                      key={c.id}
-                      className={`cursor-pointer px-3 py-2 text-sm hover:bg-[var(--color-hover)] ${activeIndex === idx ? 'bg-[var(--color-hover)]' : ''}`}
-                      onMouseDown={() => {
-                        setCategoryQuery(c.name);
-                        setValue('categoryName', c.name);
-                        setSuggestionsVisible(false);
-                      }}
-                    >
-                      {c.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      return (
+                        <button
+                          key={categoryOption.id}
+                          type="button"
+                          onClick={() => toggleExistingCategory(categoryOption.name)}
+                          className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                            isSelected
+                              ? 'border-emerald-600 bg-emerald-600 text-white'
+                              : 'border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] hover:bg-[var(--color-hover)]'
+                          }`}
+                        >
+                          {categoryOption.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm" htmlFor="newCategoryInput">Nova categoria (opcional)</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="newCategoryInput"
+                  className="input-base flex-1"
+                  value={newCategoryInput}
+                  placeholder="Digite apenas se for uma categoria nova"
+                  onChange={(e) => setNewCategoryInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addNewCategoryToSelection();
+                    }
+                  }}
+                />
+                <button type="button" className="btn btn-outline" onClick={addNewCategoryToSelection}>
+                  Adicionar
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">A primeira categoria selecionada será usada como principal para compatibilidade.</p>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm">Categorias selecionadas</label>
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] p-3">
+                {selectedCategories.length === 0 ? (
+                  <p className="text-xs text-slate-500">Selecione ao menos uma categoria existente ou adicione uma nova.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCategories.map((categoryName, idx) => (
+                      <span key={`${categoryName}-${idx}`} className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1 text-xs">
+                        {categoryName}
+                        <button
+                          type="button"
+                          className="text-slate-500 hover:text-red-600"
+                          aria-label={`Remover categoria ${categoryName}`}
+                          onClick={() => {
+                            setSelectedCategories((prev) => {
+                              const next = prev.filter((item) => item.toLowerCase() !== categoryName.toLowerCase());
+                              setValue('categoryName', next[0] ?? '', { shouldDirty: true, shouldValidate: false });
+                              return next;
+                            });
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <input type="hidden" {...register('categoryName')} />
             </div>
           </div>
 

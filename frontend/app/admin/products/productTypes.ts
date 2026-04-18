@@ -10,6 +10,7 @@ export type AdminProduct = {
   price: number;
   wholesalePrice?: number | null;
   wholesaleMinQuantity?: number | null;
+  heightCm?: number | null;
   weightGrams?: number | null;
   printHours?: number | null;
   wholesaleEnabled?: boolean;
@@ -20,4 +21,5 @@ export type AdminProduct = {
   tag?: string | null;
   category?: AdminCategory | null;
   categoryName?: string | null;
+  categoryNames?: string[];
 };

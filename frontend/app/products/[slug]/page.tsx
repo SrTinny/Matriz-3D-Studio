@@ -16,6 +16,12 @@ type Product = {
   slug: string;
   description?: string | null;
   price: number;
+  wholesalePrice?: number | null;
+  wholesaleEnabled?: boolean;
+  wholesaleMinQuantity?: number | null;
+  heightCm?: number | null;
+  weightGrams?: number | null;
+  printHours?: number | null;
   stock: number;
   imageUrl?: string | null;
   category?: { id: string; name: string } | null;
@@ -188,6 +194,24 @@ export default function ProductPage() {
             <div className="text-2xl font-bold text-brand">{formatBRL(product.price)}</div>
             <div className="text-sm">
               {product.stock > 0 ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Em estoque: {product.stock}</span> : <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Disponível para produção</span>}
+            </div>
+          </div>
+
+          <div className="grid gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] p-3 text-sm text-slate-700 dark:text-slate-300">
+            <div>
+              {product.wholesaleEnabled
+                ? `Venda no atacado ativada · mínimo ${product.wholesaleMinQuantity ?? 1} peças`
+                : 'Venda no atacado desativada'}
+            </div>
+            {product.wholesaleEnabled && typeof product.wholesalePrice === 'number' && (
+              <div>
+                Preço no atacado: <strong>{formatBRL(product.wholesalePrice)}</strong>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-3 text-xs text-slate-600 dark:text-slate-400">
+              <span>{typeof product.heightCm === 'number' ? `Altura: ${product.heightCm.toFixed(1)} cm` : 'Altura não informada'}</span>
+              <span>{typeof product.weightGrams === 'number' ? `Peso: ${product.weightGrams.toFixed(0)} g` : 'Peso não informado'}</span>
+              <span>{typeof product.printHours === 'number' ? `Impressão: ${product.printHours.toFixed(1)} h` : 'Horas não informadas'}</span>
             </div>
           </div>
 

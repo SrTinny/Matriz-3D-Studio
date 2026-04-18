@@ -37,7 +37,7 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
       className={"card h-full flex flex-col " + (compact ? 'p-2 space-y-2 text-left justify-between' : 'p-4 space-y-2')}
       aria-label={`Produto ${product.name}`}>
 
-  <div className={"relative " + (compact ? 'h-28' : 'aspect-[3/2]') + " w-full overflow-hidden rounded"} style={{ background: 'var(--color-card)' }}>
+  <div className={"relative aspect-square w-full overflow-hidden rounded"} style={{ background: 'var(--color-card)' }}>
         <Image src={src} alt={product.name} fill style={{ objectFit: 'cover' }} sizes="(max-width: 640px) 100vw, 400px" />
       </div>
 
@@ -46,13 +46,16 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
           <div className="flex flex-col gap-1">
             <h3 className={"font-semibold leading-tight " + (compact ? 'text-sm line-clamp-2' : '')} title={product.name}>{product.name}</h3>
             <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-              {product.category?.name && <span>{product.category.name}</span>}
+              {product.categoryNames?.length
+                ? <span>{product.categoryNames.join(' • ')}</span>
+                : product.category?.name && <span>{product.category.name}</span>}
+              {typeof product.heightCm === 'number' && <span>{product.heightCm.toFixed(1)}cm</span>}
               {typeof product.weightGrams === 'number' && <span>{product.weightGrams.toFixed(0)}g</span>}
               {typeof product.printHours === 'number' && <span>{product.printHours.toFixed(1)}h</span>}
               <span className={product.wholesaleEnabled ? 'text-emerald-600 font-medium' : 'text-slate-500'}>
                 {product.wholesaleEnabled
-                  ? `Atacado a partir de ${product.wholesaleMinQuantity ?? 1} peças`
-                  : 'Atacado inativo'}
+                  ? `Venda no atacado ativada · mínimo ${product.wholesaleMinQuantity ?? 1} peças`
+                  : 'Venda no atacado desativada'}
               </span>
             </div>
           </div>

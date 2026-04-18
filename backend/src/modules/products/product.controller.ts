@@ -48,6 +48,50 @@ function numberOrUndefined(value: unknown) {
   return value
 }
 
+function parseCategoryNamesInput(value: unknown) {
+  if (value === null || value === undefined) return undefined
+
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item))
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed)) return parsed.map((item) => String(item))
+      } catch {
+        // fallback para csv abaixo
+      }
+    }
+
+    return trimmed.split(',').map((part) => part.trim()).filter(Boolean)
+  }
+
+  return undefined
+}
+
+function normalizeCategoryNames(names: Array<string | null | undefined>) {
+  const normalized: string[] = []
+  const seen = new Set<string>()
+
+  for (const raw of names) {
+    const name = String(raw ?? '').trim()
+    if (!name) continue
+
+    const key = name.toLowerCase()
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    normalized.push(name)
+  }
+
+  return normalized
+}
+
 const productSelect = {
   id: true,
   name: true,
@@ -56,6 +100,7 @@ const productSelect = {
   price: true,
   wholesalePrice: true,
   wholesaleMinQuantity: true,
+  heightCm: true,
   weightGrams: true,
   printHours: true,
   wholesaleEnabled: true,
@@ -64,6 +109,7 @@ const productSelect = {
   tag: true,
   categoryId: true,
   category: { select: { id: true, name: true } },
+  categoryNames: true,
   createdAt: true,
   updatedAt: true,
 } as const
@@ -76,6 +122,7 @@ const createProductSchema = z.object({
   price: z.coerce.number().finite('preço inválido'),
   wholesalePrice: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   wholesaleMinQuantity: z.coerce.number().int().positive().optional(),
+  heightCm: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   weightGrams: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().default(0)),
   printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().default(0)),
   wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().default(false)),
@@ -85,6 +132,7 @@ const createProductSchema = z.object({
   tag: z.enum(['PROMOCAO', 'NOVO']).optional(),
   categoryId: z.string().uuid().optional().nullable(),
   categoryName: z.string().optional().nullable(),
+  categoryNames: z.preprocess(parseCategoryNamesInput, z.array(z.string()).optional()),
 })
 
 // Update sem defaults, só aplica o que vier
@@ -94,6 +142,7 @@ const updateProductSchema = z.object({
   price: z.coerce.number().finite().optional(),
   wholesalePrice: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   wholesaleMinQuantity: z.coerce.number().int().positive().optional(),
+  heightCm: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   weightGrams: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().optional()),
@@ -103,6 +152,7 @@ const updateProductSchema = z.object({
   tag: z.enum(['PROMOCAO', 'NOVO']).nullable().optional(),
   categoryId: z.string().uuid().nullable().optional(),
   categoryName: z.string().nullable().optional(),
+  categoryNames: z.preprocess(parseCategoryNamesInput, z.array(z.string()).optional()),
 })
 
 /* ========= Handlers ========= */
@@ -130,11 +180,17 @@ export async function listProducts(req: Request, res: Response) {
     const catSlug = slugify(catParam)
     const foundCat = await prisma.category.findFirst({ where: { OR: [{ slug: catSlug }, { name: { equals: catParam, mode: 'insensitive' as const } }] } })
     if (foundCat) {
-      conditions.push({ categoryId: foundCat.id })
+      conditions.push({
+        OR: [
+          { categoryId: foundCat.id },
+          { categoryNames: { has: foundCat.name } },
+        ],
+      })
     } else {
       // fallback: search in name/description
       conditions.push({
         OR: [
+          { categoryNames: { has: category } },
           { name: { contains: category, mode: 'insensitive' as const } },
           { description: { contains: category, mode: 'insensitive' as const } },
         ],
@@ -172,6 +228,7 @@ export async function listProducts(req: Request, res: Response) {
     price: number
     wholesalePrice: number | null
     wholesaleMinQuantity: number | null
+    heightCm: number | null
     weightGrams: number | null
     printHours: number | null
     wholesaleEnabled: boolean
@@ -180,6 +237,7 @@ export async function listProducts(req: Request, res: Response) {
     tag: ProductTag | null
     categoryId: string | null
     category: { id: string; name: string } | null
+    categoryNames: string[]
     createdAt: Date
     updatedAt: Date
   }
@@ -219,7 +277,7 @@ export async function listProducts(req: Request, res: Response) {
   // map enum tag to localized string for frontend
   const itemsMapped = items.map((it: SelectedProduct) => ({
     ...it,
-    categoryName: it.category?.name ?? null,
+    categoryName: it.category?.name ?? it.categoryNames?.[0] ?? null,
     tag: it.tag === 'PROMOCAO' ? 'Promoção' : it.tag === 'NOVO' ? 'Novo' : undefined,
   }))
 
@@ -237,7 +295,7 @@ export async function getProduct(req: Request, res: Response) {
   if (!product) return res.status(404).json({ message: 'Produto não encontrado' })
   res.json({
     ...product,
-    categoryName: product.category?.name ?? null,
+    categoryName: product.category?.name ?? product.categoryNames?.[0] ?? null,
     tag: product.tag === 'PROMOCAO' ? 'Promoção' : product.tag === 'NOVO' ? 'Novo' : undefined,
   })
 }
@@ -252,12 +310,15 @@ export async function createProduct(req: Request, res: Response) {
   const uploadedImageUrl = req.file ? buildUploadedImageDataUrl(req.file) : undefined
 
   try {
-    // handle free-text categoryName: find or create Category and set categoryId
+    // suporta múltiplas categorias e mantém categoryId para compatibilidade
+    const normalizedCategoryNames = normalizeCategoryNames([
+      ...(data.categoryNames ?? []),
+      data.categoryName,
+    ])
+
     let categoryId: string | undefined
-    const cnameRaw = data.categoryName
-    if (cnameRaw) {
-      const cname = String(cnameRaw).trim()
-      if (cname) {
+    if (normalizedCategoryNames.length > 0) {
+      for (const cname of normalizedCategoryNames) {
         const cslug = slugify(cname)
         let cat = await prisma.category.findUnique({ where: { slug: cslug } })
         if (!cat) {
@@ -266,7 +327,8 @@ export async function createProduct(req: Request, res: Response) {
         if (!cat) {
           cat = await prisma.category.create({ data: { name: cname, slug: cslug } })
         }
-        categoryId = cat.id
+
+        if (!categoryId) categoryId = cat.id
       }
     }
 
@@ -278,9 +340,12 @@ export async function createProduct(req: Request, res: Response) {
       price: data.price,
       wholesalePrice: data.wholesaleEnabled ? data.wholesalePrice ?? null : null,
       wholesaleMinQuantity: data.wholesaleEnabled ? data.wholesaleMinQuantity ?? 1 : null,
+      heightCm: data.heightCm ?? null,
       weightGrams: data.weightGrams,
       printHours: data.printHours,
       wholesaleEnabled: data.wholesaleEnabled,
+      categoryNames: normalizedCategoryNames,
+      categoryName: normalizedCategoryNames[0] ?? null,
       stock: data.stock ?? 0,
       description: data.description ?? null,
       imageUrl: uploadedImageUrl ?? data.imageUrl ?? null,
@@ -292,7 +357,7 @@ export async function createProduct(req: Request, res: Response) {
 
     res.status(201).json({
       ...created,
-      categoryName: created.category?.name ?? null,
+      categoryName: created.category?.name ?? created.categoryNames?.[0] ?? null,
       tag: created.tag === 'PROMOCAO' ? 'Promoção' : created.tag === 'NOVO' ? 'Novo' : undefined,
     })
   } catch (e: unknown) {
@@ -322,9 +387,12 @@ export async function updateProduct(req: Request, res: Response) {
     price?: number
     wholesalePrice?: number | null
     wholesaleMinQuantity?: number | null
+    heightCm?: number | null
     weightGrams?: number | null
     printHours?: number | null
     wholesaleEnabled?: boolean
+    categoryNames?: string[]
+    categoryName?: string | null
     stock?: number
     description?: string | null
     imageUrl?: string | null
@@ -340,6 +408,7 @@ export async function updateProduct(req: Request, res: Response) {
   if (patch.price !== undefined) data.price = patch.price
   if (patch.wholesalePrice !== undefined) data.wholesalePrice = patch.wholesalePrice
   if (patch.wholesaleMinQuantity !== undefined) data.wholesaleMinQuantity = patch.wholesaleMinQuantity
+  if (patch.heightCm !== undefined) data.heightCm = patch.heightCm
   if (patch.weightGrams !== undefined) data.weightGrams = patch.weightGrams
   if (patch.printHours !== undefined) data.printHours = patch.printHours
   if (patch.wholesaleEnabled !== undefined) {
@@ -352,13 +421,21 @@ export async function updateProduct(req: Request, res: Response) {
   if (uploadedImageUrl) data.imageUrl = uploadedImageUrl
   else if (patch.imageUrl !== undefined) data.imageUrl = patch.imageUrl ?? null
   if (patch.tag !== undefined) data.tag = patch.tag ?? null
-  // handle categoryName in update: find/create category and set categoryId
+  // handle categoryNames/categoryName in update: suporte a múltiplas categorias
   let updateCategoryId: string | undefined
-  if (patch.categoryName !== undefined) {
-    const cnameRaw = patch.categoryName
-    if (cnameRaw) {
-      const cname = String(cnameRaw).trim()
-      if (cname) {
+  if (patch.categoryNames !== undefined || patch.categoryName !== undefined) {
+    const normalizedCategoryNames = normalizeCategoryNames([
+      ...(patch.categoryNames ?? []),
+      patch.categoryName,
+    ])
+
+    data.categoryNames = normalizedCategoryNames
+    data.categoryName = normalizedCategoryNames[0] ?? null
+
+    if (normalizedCategoryNames.length === 0) {
+      updateCategoryId = null as unknown as string
+    } else {
+      for (const cname of normalizedCategoryNames) {
         const cslug = slugify(cname)
         let cat = await prisma.category.findUnique({ where: { slug: cslug } })
         if (!cat) {
@@ -367,12 +444,9 @@ export async function updateProduct(req: Request, res: Response) {
         if (!cat) {
           cat = await prisma.category.create({ data: { name: cname, slug: cslug } })
         }
-        updateCategoryId = cat.id
-      } else {
-        updateCategoryId = null as unknown as string
+
+        if (!updateCategoryId) updateCategoryId = cat.id
       }
-    } else {
-      updateCategoryId = null as unknown as string
     }
   }
 
@@ -380,7 +454,7 @@ export async function updateProduct(req: Request, res: Response) {
     // build final update payload
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = { ...data }
-    if (patch.categoryName !== undefined) {
+    if (patch.categoryName !== undefined || patch.categoryNames !== undefined) {
       // set explicit categoryId (could be string or null)
       updateData.categoryId = updateCategoryId ?? null
     }
@@ -392,7 +466,7 @@ export async function updateProduct(req: Request, res: Response) {
     })
     res.json({
       ...updated,
-      categoryName: updated.category?.name ?? null,
+      categoryName: updated.category?.name ?? updated.categoryNames?.[0] ?? null,
       tag: updated.tag === 'PROMOCAO' ? 'Promoção' : updated.tag === 'NOVO' ? 'Novo' : undefined,
     })
   } catch (e: unknown) {

@@ -86,6 +86,7 @@ model Product {
   price       Float
   wholesalePrice Float?
   wholesaleMinQuantity Int? 
+  heightCm    Float?
   weightGrams Float?
   printHours  Float?
   wholesaleEnabled Boolean @default(false)
@@ -95,6 +96,7 @@ model Product {
   categoryId  String?
   category    Category?  @relation(fields: [categoryId], references: [id])
   categoryName String?
+  categoryNames String[] @default([])
   cartItems   CartItem[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

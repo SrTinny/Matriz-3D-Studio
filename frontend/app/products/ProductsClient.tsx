@@ -20,6 +20,12 @@ type Product = {
   name: string;
   description?: string | null;
   price: number;
+  wholesalePrice?: number | null;
+  wholesaleEnabled?: boolean;
+  wholesaleMinQuantity?: number | null;
+  heightCm?: number | null;
+  weightGrams?: number | null;
+  printHours?: number | null;
   stock: number;
   imageUrl?: string | null; // 👈 adicionado
 };
