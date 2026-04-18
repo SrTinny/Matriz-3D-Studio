@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
@@ -93,6 +93,12 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
     const nextCategory = newCategoryInput.trim();
     if (!nextCategory) return;
 
+    setAllCategories((prev) => {
+      const alreadyExists = prev.some((item) => item.name.toLowerCase() === nextCategory.toLowerCase());
+      if (alreadyExists) return prev;
+      return [...prev, { id: `local-${nextCategory.toLowerCase()}`, name: nextCategory }];
+    });
+
     setSelectedCategories((prev) => {
       const next = normalizeCategoryNames([...prev, nextCategory]);
       setValue('categoryName', next[0] ?? '', { shouldDirty: true, shouldValidate: false });
@@ -136,24 +142,19 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
     }
   }, [editingProduct, reset]);
 
-  useEffect(() => {
-    let mounted = true;
-
-    void (async () => {
-      try {
-        const res = await api.get('/categories');
-        if (!mounted) return;
-        setAllCategories(res.data ?? []);
-      } catch {
-        if (!mounted) return;
-        setAllCategories([]);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await api.get('/categories');
+      setAllCategories(res.data ?? []);
+    } catch {
+      setAllCategories([]);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    void fetchCategories();
+  }, [open, fetchCategories]);
 
   useEffect(() => {
     if (editingProduct) return;
@@ -223,6 +224,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
         await api.post("/products", payload);
         toast.success("Produto criado");
       }
+      await fetchCategories();
       try { window.dispatchEvent(new CustomEvent('categories:changed', { detail: categoryNames[0] ?? undefined })); } catch {}
       onSaveSuccess();
     } catch (e: unknown) {
