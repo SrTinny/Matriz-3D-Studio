@@ -26,6 +26,11 @@ export function errorHandler(
     message = 'Falha ao conectar no banco de dados. Verifique o DATABASE_URL e confirme se o PostgreSQL local está ativo.';
   }
 
+  if (/exceeded the data transfer quota/i.test(message)) {
+    status = 503;
+    message = 'Banco indisponível por cota de transferência excedida no provedor. Aguarde o reset da cota ou faça upgrade do plano do banco.';
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     console.error('[ERROR]', err);
   }
