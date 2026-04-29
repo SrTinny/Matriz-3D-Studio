@@ -11,31 +11,45 @@
 </head>
 <body>
   <main class="card">
-    <h1>Calculadora de precificacao</h1>
-    <p>Use os mesmos parametros da logica atual do projeto (gramas + horas de impressao).</p>
+    <header class="hero">
+      <h1>Calculadora de precificacao</h1>
+      <p>Use os mesmos parametros da logica atual do projeto (gramas + horas de impressao).</p>
+    </header>
 
-    <section class="grid">
+    <section class="grid" aria-label="Parametros da calculadora">
       <div>
         <label for="weight">Peso da peca (gramas)</label>
-        <input id="weight" type="number" min="0" step="0.01" value="120" />
+        <input id="weight" type="text" inputmode="decimal" placeholder="120,00" value="120" />
       </div>
       <div>
         <label for="hours">Horas de impressao</label>
-        <input id="hours" type="number" min="0" step="0.01" value="4" />
+        <input id="hours" type="text" inputmode="decimal" placeholder="4,00" value="4" />
       </div>
       <div>
         <label for="filamentCost">Custo do filamento (R$/g)</label>
-        <input id="filamentCost" type="number" min="0" step="0.001" value="0.08" />
+        <input id="filamentCost" type="text" inputmode="decimal" placeholder="0,08" value="0.08" />
       </div>
       <div>
         <label for="extraCosts">Outros custos por peca (R$)</label>
-        <input id="extraCosts" type="number" min="0" step="0.01" value="0" />
+        <input id="extraCosts" type="text" inputmode="decimal" placeholder="0,00" value="0" />
       </div>
       <div>
-        <label for="extraCostsMultiplier">Quantidade de pecas na bandeja</label>
-        <input id="extraCostsMultiplier" type="number" min="1" step="1" value="1" />
+        <label for="extraCostsMultiplier">Quantidade de pecas por bandeja</label>
+        <input id="extraCostsMultiplier" type="text" inputmode="numeric" placeholder="1" value="1" />
+      </div>
+      <div>
+        <label for="totalPieces">Quantidade total de pecas do pedido</label>
+        <input id="totalPieces" type="text" inputmode="numeric" placeholder="1" value="1" />
       </div>
     </section>
+
+    <section class="actions" aria-label="Acoes da calculadora">
+      <button type="button" id="resetDefaults" class="btn btn-secondary">Restaurar padroes</button>
+      <button type="button" id="clearFields" class="btn btn-primary">Limpar campos</button>
+      <button type="button" id="copySummary" class="btn btn-copy">Copiar resumo</button>
+    </section>
+
+    <p class="action-feedback" id="actionFeedback" aria-live="polite"></p>
 
     <section class="results" aria-live="polite">
       <div class="line"><span>Custo de material</span><strong id="materialCost">R$ 0,00</strong></div>
@@ -44,111 +58,20 @@
       <div class="line"><span>Custo de falha</span><strong id="failureCost">R$ 0,00</strong></div>
       <div class="line"><span>Outros custos</span><strong id="additionalCosts">R$ 0,00</strong></div>
       <div class="line"><span>Custo total de producao</span><strong id="productionCost">R$ 0,00</strong></div>
+      <div class="line"><span>Custo de producao (por peca)</span><strong id="productionUnitCost">R$ 0,00</strong></div>
+      <div class="line"><span>Bandejas necessarias</span><strong id="traysNeeded">0</strong></div>
+      <div class="line highlight"><span>Orcamento final de producao</span><strong id="productionFinalCost">R$ 0,00</strong></div>
       <div class="line highlight"><span>Preco sugerido varejo (total)</span><strong id="retailPrice">R$ 0,00</strong></div>
       <div class="line"><span>Preco sugerido varejo (por peca)</span><strong id="retailUnitPrice">R$ 0,00</strong></div>
+      <div class="line"><span>Orcamento final varejo</span><strong id="retailFinalPrice">R$ 0,00</strong></div>
       <div class="line"><span>Preco sugerido atacado (total)</span><strong id="wholesalePrice">R$ 0,00</strong></div>
       <div class="line"><span>Preco sugerido atacado (por peca)</span><strong id="wholesaleUnitPrice">R$ 0,00</strong></div>
+      <div class="line"><span>Orcamento final atacado</span><strong id="wholesaleFinalPrice">R$ 0,00</strong></div>
     </section>
 
     <p class="footer">Formula replicada de frontend/app/admin/products/pricing.ts</p>
   </main>
 
-  <script>
-    const PRICING_DEFAULTS = {
-      filamentPricePerGram: 0.08,
-      machineConsumptionKw: 0.1,
-      energyPricePerKwh: 1.1,
-      wearCostPerHour: 0.9,
-      failureRate: 0.08,
-      technicalHourRate: 18,
-      retailMarkup: 2.6,
-      wholesaleMarkup: 2.0,
-      retailLaborHours: 0.2,
-      wholesaleLaborHours: 0.06,
-    };
-
-    const money = (value) => Math.max(0, Number.isFinite(value) ? value : 0);
-    const roundCurrency = (value) => Math.round(money(value) * 100) / 100;
-    const formatBRL = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-
-    function calculatePricingSuggestion(input) {
-      const weightGrams = money(input.weightGrams);
-      const printHours = money(input.printHours);
-      const filamentPricePerGram = money(input.filamentPricePerGram);
-      const additionalCostsPerPiece = money(input.additionalCostsPerPiece);
-      const trayPieceQuantity = Math.max(1, Math.floor(money(input.trayPieceQuantity)));
-      const additionalCosts = additionalCostsPerPiece * trayPieceQuantity;
-
-      const materialCost = weightGrams * filamentPricePerGram;
-      const energyCost = printHours * PRICING_DEFAULTS.machineConsumptionKw * PRICING_DEFAULTS.energyPricePerKwh;
-      const depreciationCost = printHours * PRICING_DEFAULTS.wearCostPerHour;
-      const failureCost = (materialCost + energyCost + depreciationCost) * PRICING_DEFAULTS.failureRate;
-      const productionCost = materialCost + energyCost + depreciationCost + failureCost + additionalCosts;
-
-      const retailLabor = PRICING_DEFAULTS.technicalHourRate * PRICING_DEFAULTS.retailLaborHours;
-      const wholesaleLabor = PRICING_DEFAULTS.technicalHourRate * PRICING_DEFAULTS.wholesaleLaborHours;
-      const retailPrice = (productionCost + retailLabor) * PRICING_DEFAULTS.retailMarkup;
-      const wholesalePrice = (productionCost + wholesaleLabor) * PRICING_DEFAULTS.wholesaleMarkup;
-
-      return {
-        materialCost: roundCurrency(materialCost),
-        energyCost: roundCurrency(energyCost),
-        depreciationCost: roundCurrency(depreciationCost),
-        failureCost: roundCurrency(failureCost),
-        additionalCosts: roundCurrency(additionalCosts),
-        productionCost: roundCurrency(productionCost),
-        retailPrice: roundCurrency(retailPrice),
-        retailUnitPrice: roundCurrency(retailPrice / trayPieceQuantity),
-        wholesalePrice: roundCurrency(wholesalePrice),
-        wholesaleUnitPrice: roundCurrency(wholesalePrice / trayPieceQuantity),
-      };
-    }
-
-    const refs = {
-      weight: document.getElementById('weight'),
-      hours: document.getElementById('hours'),
-      filamentCost: document.getElementById('filamentCost'),
-      extraCosts: document.getElementById('extraCosts'),
-      extraCostsMultiplier: document.getElementById('extraCostsMultiplier'),
-      materialCost: document.getElementById('materialCost'),
-      energyCost: document.getElementById('energyCost'),
-      depreciationCost: document.getElementById('depreciationCost'),
-      failureCost: document.getElementById('failureCost'),
-      additionalCosts: document.getElementById('additionalCosts'),
-      productionCost: document.getElementById('productionCost'),
-      retailPrice: document.getElementById('retailPrice'),
-      retailUnitPrice: document.getElementById('retailUnitPrice'),
-      wholesalePrice: document.getElementById('wholesalePrice'),
-      wholesaleUnitPrice: document.getElementById('wholesaleUnitPrice'),
-    };
-
-    function update() {
-      const suggestion = calculatePricingSuggestion({
-        weightGrams: Number(refs.weight.value),
-        printHours: Number(refs.hours.value),
-        filamentPricePerGram: Number(refs.filamentCost.value),
-        additionalCostsPerPiece: Number(refs.extraCosts.value),
-        trayPieceQuantity: Number(refs.extraCostsMultiplier.value),
-      });
-
-      refs.materialCost.textContent = formatBRL(suggestion.materialCost);
-      refs.energyCost.textContent = formatBRL(suggestion.energyCost);
-      refs.depreciationCost.textContent = formatBRL(suggestion.depreciationCost);
-      refs.failureCost.textContent = formatBRL(suggestion.failureCost);
-      refs.additionalCosts.textContent = formatBRL(suggestion.additionalCosts);
-      refs.productionCost.textContent = formatBRL(suggestion.productionCost);
-      refs.retailPrice.textContent = formatBRL(suggestion.retailPrice);
-      refs.retailUnitPrice.textContent = formatBRL(suggestion.retailUnitPrice);
-      refs.wholesalePrice.textContent = formatBRL(suggestion.wholesalePrice);
-      refs.wholesaleUnitPrice.textContent = formatBRL(suggestion.wholesaleUnitPrice);
-    }
-
-    refs.weight.addEventListener('input', update);
-    refs.hours.addEventListener('input', update);
-    refs.filamentCost.addEventListener('input', update);
-    refs.extraCosts.addEventListener('input', update);
-    refs.extraCostsMultiplier.addEventListener('input', update);
-    update();
-  </script>
+  <script src="./calculadora-precificacao.js"></script>
 </body>
 </html>

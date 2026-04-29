@@ -97,6 +97,69 @@ input:focus {
   background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
 }
 
+.actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease, border-color 120ms ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(29, 92, 255, 0.28);
+}
+
+.btn-primary:hover {
+  background: #154fe9;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #24437f;
+  border-color: var(--border);
+}
+
+.btn-secondary:hover {
+  background: #f4f8ff;
+}
+
+.btn-copy {
+  background: #0f8d72;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(15, 141, 114, 0.24);
+}
+
+.btn-copy:hover {
+  background: #0b785f;
+}
+
+.action-feedback {
+  margin: 10px 2px 0;
+  min-height: 1.1rem;
+  font-size: 0.84rem;
+  color: #50627e;
+}
+
 .line {
   display: flex;
   justify-content: space-between;
@@ -151,9 +214,21 @@ input:focus {
   .line {
     font-size: 0.92rem;
   }
+
+  .actions {
+    margin-top: 12px;
+  }
 }
 
 @media (max-width: 520px) {
+  .actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
   .line {
     flex-direction: column;
     align-items: flex-start;
