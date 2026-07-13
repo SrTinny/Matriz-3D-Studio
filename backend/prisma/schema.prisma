@@ -23,6 +23,8 @@ model User {
   name            String
   email           String   @unique
   password        String
+  cpf             String?  @unique
+  phone           String?
   role            Role     @default(USER)
   isActive        Boolean  @default(false)
   activationToken String?  @unique

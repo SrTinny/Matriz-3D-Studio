@@ -124,17 +124,19 @@ async function activateAccount(token: string) {
 
   return { status: 200, message: 'Conta ativada com sucesso. Você já pode fazer login.' };
 }
-
 // POST /auth/register
 export async function register(req: Request, res: Response) {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ message: 'Dados inválidos', errors: parsed.error.flatten() });
   }
-  const { name, email, password } = parsed.data;
+  const { name, email, password, cpf, phone } = parsed.data;
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return res.status(409).json({ message: 'E-mail já registrado' });
+  const existsEmail = await prisma.user.findUnique({ where: { email } });
+  if (existsEmail) return res.status(409).json({ message: 'E-mail já registrado' });
+
+  const existsCpf = await prisma.user.findUnique({ where: { cpf } });
+  if (existsCpf) return res.status(409).json({ message: 'CPF já cadastrado no sistema' });
 
   const passwordHash = await bcrypt.hash(password, 12);
   const activationToken = createActivationToken();
@@ -145,6 +147,8 @@ export async function register(req: Request, res: Response) {
       name,
       email,
       password: passwordHash,
+      cpf,
+      phone,
       role: 'USER',
       isActive: false,
       activationToken,

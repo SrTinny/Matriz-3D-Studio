@@ -30,6 +30,8 @@ async function main() {
       name: 'Admin',
       email: adminEmail,
       password: passwordHash,
+      cpf: '00000000000',
+      phone: '00000000000',
       role: 'ADMIN',
       isActive: true,
     },
