@@ -202,10 +202,8 @@ export default function CartPage() {
         description:
           'As peças sem estoque ainda serão produzidas antes do envio. A entrega pode demorar mais que o normal.',
       });
-      return;
     }
-
-    toast.info('Fluxo de checkout (futuro)');
+    window.location.href = '/checkout';
   }
 
   if (!ready) return null;
@@ -314,13 +312,13 @@ export default function CartPage() {
                     <button
                       onClick={() => updateQty(it, it.quantity - 1)}
                       disabled={disabledRow || it.quantity <= 1}
-                      className="btn h-10 w-10 px-0 border border-black/10 dark:border-white/10 disabled:opacity-50"
+                      className="btn btn-outline h-10 w-10 p-0 disabled:opacity-50 hover:bg-[var(--color-hover)]"
                       title="Diminuir"
                       aria-label={`Diminuir quantidade de ${it.product.name}`}
                     >
                       <MinusIcon />
                     </button>
-
+ 
                     <input
                       type="number"
                       inputMode="numeric"
@@ -335,21 +333,21 @@ export default function CartPage() {
                       disabled={disabledRow}
                       aria-label={`Quantidade de ${it.product.name}`}
                     />
-
+ 
                     <button
                       onClick={() => updateQty(it, it.quantity + 1)}
                       disabled={disabledRow || (it.product.stock > 0 && it.quantity >= it.product.stock)}
-                      className="btn h-10 w-10 px-0 border border-black/10 dark:border-white/10 disabled:opacity-50"
+                      className="btn btn-outline h-10 w-10 p-0 disabled:opacity-50 hover:bg-[var(--color-hover)]"
                       title="Aumentar"
                       aria-label={`Aumentar quantidade de ${it.product.name}`}
                     >
                       <PlusIcon />
                     </button>
-
+ 
                     <button
                       onClick={() => removeItem(it.id)}
                       disabled={disabledRow}
-                      className="btn h-10 px-3 border border-red-600 text-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50"
+                      className="btn h-10 w-10 p-0 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white dark:border-red-500/20 disabled:opacity-50 transition-colors"
                       title="Remover item"
                       aria-label={`Remover ${it.product.name}`}
                     >

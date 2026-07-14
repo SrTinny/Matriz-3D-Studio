@@ -34,6 +34,7 @@ model User {
   addresses       Address[] @relation("UserAddresses")
   carts           Cart[]
   refreshSessions RefreshTokenSession[]
+  orders          Order[]  @relation("UserOrders")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -53,6 +54,7 @@ model Address {
   street         String
   number         String
   complement     String?
+  orders         Order[]  @relation("AddressOrders")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -100,6 +102,7 @@ model Product {
   categoryName String?
   categoryNames String[] @default([])
   cartItems   CartItem[]
+  orderItems  OrderItem[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
@@ -131,5 +134,53 @@ model CartItem {
   quantity  Int      @default(1)
 
   @@index([cartId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  CANCELLED
+}
+
+model Order {
+  id                String       @id @default(uuid())
+  userId            String
+  user              User         @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  addressId         String?
+  address           Address?     @relation("AddressOrders", fields: [addressId], references: [id], onDelete: SetNull)
+  
+  // Endereço "congelado" na compra
+  shippingLabel     String
+  shippingZipCode   String
+  shippingState     String
+  shippingCity      String
+  shippingNeighborhood String
+  shippingStreet    String
+  shippingNumber    String
+  shippingComplement String?
+
+  status            OrderStatus  @default(PENDING)
+  paymentMethod     String       // "PIX" | "CARD"
+  total             Float
+  items             OrderItem[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([addressId])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int      @default(1)
+  price     Float    // preço unitário congelado no momento da compra
+
+  @@index([orderId])
   @@index([productId])
 }

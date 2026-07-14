@@ -7,6 +7,7 @@ import productRoutes from './modules/products/product.routes'
 import categoryRoutes from './modules/categories/category.routes'
 import authRoutes from './modules/auth/auth.routes'
 import cartRoutes from './modules/cart/cart.routes'
+import orderRoutes from './modules/orders/order.routes'
 import { errorHandler } from './middlewares/errorHandler'
 import { env } from './config/env'
 
@@ -74,6 +75,7 @@ app.use('/auth', authRoutes)
 app.use('/products', productRoutes)
 app.use('/categories', categoryRoutes)
 app.use('/cart', cartRoutes)
+app.use('/orders', orderRoutes)
 
 app.get('/', (_req, res) => res.send('🚀 Servidor rodando com TypeScript!'))
 

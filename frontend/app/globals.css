@@ -1,9 +1,11 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ===== Tokens base ===== */
 @theme {
-  --color-brand: #42A5F5;
-  --color-accent: #FFB74D;
+  --color-brand: var(--brand-color);
+  --color-accent: var(--accent-color);
   --color-secondary-red: #EF5350;
   --color-secondary-orange: #FFB74D;
   --color-secondary-green: #81C784;
@@ -26,6 +28,8 @@ table { width: 100%; border-collapse: collapse; }
 
 /* ===== Light (default) ===== */
 :root {
+  --brand-color:  #1565c0;
+  --accent-color: #e65100;
   --color-bg:     #f5f9ff;
   --color-card:   #ffffff;
   --color-text:   #0f172a;
@@ -38,6 +42,8 @@ table { width: 100%; border-collapse: collapse; }
 
 /* ===== Dark ===== */
 .dark {
+  --brand-color:  #42A5F5;
+  --accent-color: #FFB74D;
   --color-bg:     #08111f;
   --color-card:   #0f1c2f;
   --color-text:   #e5f0ff;
