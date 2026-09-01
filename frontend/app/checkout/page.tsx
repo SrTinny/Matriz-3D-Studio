@@ -51,6 +51,7 @@ export default function CheckoutPage() {
   const [ready, setReady] = useState(false);
   const [cart, setCart] = useState<Cart | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
+  const [userName, setUserName] = useState('Cliente');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CARD'>('PIX');
@@ -84,6 +85,7 @@ export default function CheckoutPage() {
 
         setCart(cartRes.data);
         setAddress(meRes.data.user.selectedAddress ?? null);
+        setUserName(meRes.data.user.name || 'Cliente');
 
         if (cartRes.data.items.length === 0) {
           toast.error('Seu carrinho está vazio.');
@@ -119,26 +121,37 @@ export default function CheckoutPage() {
   };
 
   async function handleConfirmPurchase() {
-    if (!address) {
+    if (!address || !cart) {
       toast.error('Selecione um endereço de entrega antes de finalizar.');
       return;
     }
 
-    if (paymentMethod === 'CARD') {
-      if (!cardNumber || !cardName || !cardExpiry || !cardCvv) {
-        toast.error('Preencha todos os dados do cartão de crédito simulado.');
-        return;
-      }
-    }
-
     try {
       setSubmitting(true);
-      const res = await api.post<{ message: string; order: { id: string } }>('/orders', {
-        paymentMethod,
-      });
 
-      toast.success('Compra simulada com sucesso!');
-      window.location.href = `/checkout/success?orderId=${res.data.order.id}`;
+      const itemsText = cart.items
+        .map((item) => {
+          const itemTotal = item.product.price * item.quantity;
+          return `- ${item.product.name} (${item.quantity}x ${formatBRL(item.product.price)} = ${formatBRL(itemTotal)})`;
+        })
+        .join('\n');
+
+      const addressText = `${address.street}, ${address.number}${address.complement ? ` · ${address.complement}` : ''} - ${address.neighborhood} / ${address.city}-${address.state} (CEP ${address.zipCode.replace(/^(\d{5})(\d{3})$/, '$1-$2')})`;
+
+      const whatsappMessage = [
+        'Olá! Gostaria de finalizar meu pedido.',
+        '',
+        `Nome: ${userName}`,
+        `Endereço: ${addressText}`,
+        '',
+        'Itens:',
+        itemsText,
+        '',
+        `Total: ${formatBRL(total)}`,
+      ].join('\n');
+
+      const whatsappUrl = `https://wa.me/558896102643?text=${encodeURIComponent(whatsappMessage)}`;
+      window.location.href = whatsappUrl;
     } catch (e: unknown) {
       let msg = 'Erro ao finalizar pedido';
       if (axios.isAxiosError(e)) {
@@ -214,7 +227,7 @@ export default function CheckoutPage() {
           </section>
 
           {/* Sessão Pagamento */}
-          <section className="card p-5 space-y-4">
+          <section className="card p-5 space-y-4" style={{ display: 'none' }} aria-hidden="true">
             <h2 className="text-lg font-semibold border-b pb-3 border-[var(--color-border)] flex items-center gap-2">
               <svg className="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -255,138 +268,6 @@ export default function CheckoutPage() {
                 <span className="text-sm font-semibold">Cartão de Crédito</span>
               </button>
             </div>
-
-            {/* Renderização do Form do Pix */}
-            {paymentMethod === 'PIX' && (
-              <div className="p-4 rounded-xl border border-[var(--color-border)] bg-slate-500/5 space-y-4 text-center">
-                <div className="mx-auto w-36 h-36 bg-white p-2 rounded-lg border flex items-center justify-center">
-                  {/* QR Code Simulado com SVG */}
-                  <svg className="w-full h-full text-slate-800" viewBox="0 0 100 100" fill="currentColor">
-                    <rect x="10" y="10" width="25" height="25" />
-                    <rect x="15" y="15" width="15" height="15" fill="white" />
-                    <rect x="18" y="18" width="9" height="9" />
-                    
-                    <rect x="65" y="10" width="25" height="25" />
-                    <rect x="70" y="15" width="15" height="15" fill="white" />
-                    <rect x="73" y="18" width="9" height="9" />
-                    
-                    <rect x="10" y="65" width="25" height="25" />
-                    <rect x="15" y="70" width="15" height="15" fill="white" />
-                    <rect x="18" y="73" width="9" height="9" />
-
-                    <rect x="42" y="20" width="15" height="15" />
-                    <rect x="48" y="48" width="20" height="20" />
-                    <rect x="75" y="42" width="10" height="10" />
-                    <rect x="45" y="75" width="15" height="10" />
-                  </svg>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-slate-500">Chave PIX Aleatória Simulada</p>
-                  <code className="text-xs break-all select-all bg-black/5 dark:bg-white/5 p-2 rounded block">
-                    00020101021226870014br.gov.bcb.pix25650020matriz3dstudiopixkey99347895783457
-                  </code>
-                </div>
-                <p className="text-xs text-slate-500">
-                  O QR Code acima é apenas ilustrativo para demonstração do fluxo.
-                </p>
-              </div>
-            )}
-
-            {/* Renderização do Form de Cartão */}
-            {paymentMethod === 'CARD' && (
-              <div className="space-y-4">
-                {/* Visualizador do Cartão */}
-                <div className="relative mx-auto max-w-[340px] h-48 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 text-white rounded-2xl p-5 shadow-xl flex flex-col justify-between overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-8 -mt-8 pointer-events-none" />
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest opacity-60">Cartão de Crédito</p>
-                      <h3 className="text-sm font-bold mt-1">Matriz 3D Pay</h3>
-                    </div>
-                    {/* Chip do Cartão */}
-                    <div className="w-10 h-7 bg-amber-400/20 rounded-md border border-amber-400/30 flex items-center justify-center">
-                      <div className="grid grid-cols-3 gap-0.5 w-6 h-4 opacity-50">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                          <div key={i} className="border border-amber-400/50 rounded-sm" />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-lg font-mono tracking-widest">
-                      {cardNumber ? cardNumber.replace(/(\d{4})/g, '$1 ').trim() : '•••• •••• •••• ••••'}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <div className="max-w-[190px]">
-                      <p className="text-[9px] uppercase opacity-60 tracking-wider">Titular</p>
-                      <p className="font-semibold uppercase truncate">{cardName || 'Nome do Titular'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] uppercase opacity-60 tracking-wider">Validade</p>
-                      <p className="font-semibold">{cardExpiry || 'MM/AA'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Inputs de dados */}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="text-xs mb-1 block">Número do Cartão</label>
-                    <input
-                      type="text"
-                      maxLength={16}
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, ''))}
-                      className="input-base"
-                      placeholder="0000000000000000"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs mb-1 block">Nome Impresso</label>
-                    <input
-                      type="text"
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value)}
-                      className="input-base"
-                      placeholder="Nome do Titular"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs mb-1 block">Validade</label>
-                      <input
-                        type="text"
-                        maxLength={5}
-                        value={cardExpiry}
-                        onChange={(e) => {
-                          let v = e.target.value.replace(/\D/g, '');
-                          if (v.length > 2) v = `${v.slice(0, 2)}/${v.slice(2, 4)}`;
-                          setCardExpiry(v);
-                        }}
-                        className="input-base text-center"
-                        placeholder="MM/AA"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs mb-1 block">CVV</label>
-                      <input
-                        type="text"
-                        maxLength={3}
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                        className="input-base text-center"
-                        placeholder="000"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </section>
         </div>
 

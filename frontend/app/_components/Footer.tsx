@@ -10,12 +10,6 @@ type FooterLink = {
 
 const benefitItems = [
   {
-    title: "Pagamento sem atrito",
-    description: "Cartao, Pix e outras formas de pagamento para fechar o pedido sem ruído.",
-    cta: { label: "Ver formas de pagamento", href: "/privacy" },
-    icon: "payment",
-  },
-  {
     title: "Entrega clara do catálogo",
     description: "Peças, coleções e disponibilidade organizadas para acelerar sua escolha.",
     cta: { label: "Explorar produtos", href: "/products" },
@@ -76,14 +70,6 @@ const legalLinks: FooterLink[] = [
 
 function renderBenefitIcon(icon: (typeof benefitItems)[number]["icon"]) {
   switch (icon) {
-    case "payment":
-      return (
-        <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="5" width="20" height="14" rx="2" />
-          <path d="M2 10h20" />
-          <path d="M6 15h4" />
-        </svg>
-      );
     case "box":
       return (
         <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
