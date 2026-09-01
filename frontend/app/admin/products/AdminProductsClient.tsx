@@ -263,6 +263,12 @@ export default function AdminProductsPage() {
                 <option value={50}>50 / página</option>
               </select>
               <button
+                onClick={() => window.location.href = '/admin/orcamento'}
+                className="btn btn-outline whitespace-nowrap w-full sm:w-auto"
+              >
+                Calculadora de orçamento
+              </button>
+              <button
                 onClick={startCreate}
                 className="btn border border-black/10 dark:border-white/10 whitespace-nowrap w-full sm:w-auto"
               >
