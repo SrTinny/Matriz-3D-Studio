@@ -37,7 +37,7 @@ type CategoryOption = { id: string; name: string; slug?: string };
 
 type CategoryGroup = {
   parent: string;
-  children: Array<{ id: string; label: string }>;
+  children: Array<{ id: string; label: string; value: string }>;
 };
 
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
@@ -66,6 +66,7 @@ export default function ProductsClient() {
   const [items, setItems] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const PER_PAGE = 20;
@@ -105,14 +106,18 @@ export default function ProductsClient() {
   const searchParamsKey = searchParams?.toString() ?? '';
 
   const categoryGroups = useMemo<CategoryGroup[]>(() => {
-    const map = new Map<string, Array<{ id: string; label: string }>>();
+    const map = new Map<string, Array<{ id: string; label: string; value: string }>>();
 
     for (const categoryOption of categoriesList) {
       const hierarchy = parseCategoryHierarchy(categoryOption.name);
       if (!hierarchy) continue;
 
       const current = map.get(hierarchy.parent) ?? [];
-      current.push({ id: categoryOption.id, label: hierarchy.child });
+      current.push({
+        id: categoryOption.id,
+        label: hierarchy.child,
+        value: categoryOption.slug ?? categoryOption.name,
+      });
       map.set(hierarchy.parent, current);
     }
 
@@ -127,7 +132,11 @@ export default function ProductsClient() {
   const flatCategoryOptions = useMemo(
     () =>
       categoriesList
-        .map((item) => ({ id: item.id, label: item.name.trim() }))
+        .map((item) => ({
+          id: item.id,
+          label: item.name.trim(),
+          value: item.slug ?? item.name.trim(),
+        }))
         .filter((item) => item.label.length > 0)
         .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { sensitivity: 'base' })),
     [categoriesList],
@@ -258,9 +267,21 @@ export default function ProductsClient() {
   }, [searchParamsKey]);
 
   useEffect(() => {
+    if (!loading) {
+      setShowSkeleton(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => setShowSkeleton(true), 220);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
+
+  useEffect(() => {
     if (!category) return;
 
-    const group = categoryGroups.find((item) => item.children.some((child) => child.id === category));
+    const group = categoryGroups.find((item) =>
+      item.children.some((child) => child.value === category || child.id === category || child.label === category),
+    );
     if (group) setSelectedCategoryParent(group.parent);
   }, [category, categoryGroups]);
 
@@ -494,15 +515,15 @@ export default function ProductsClient() {
                   </button>
 
                   {selectedCategoryGroup.children.map((sub) => {
-                    const active = category === sub.id;
+                    const active = category === sub.value || category === sub.id;
                     return (
                       <button
                         key={sub.id}
                         type="button"
                         onClick={() => {
-                          setCategory(sub.id);
+                          setCategory(sub.value);
                           setPage(1);
-                          updateProductsQuery({ category: sub.id });
+                          updateProductsQuery({ category: sub.value });
                         }}
                         className={clsx(
                           'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
@@ -539,16 +560,16 @@ export default function ProductsClient() {
               </button>
 
               {flatCategoryOptions.map((option) => {
-                const active = category === option.id;
+                const active = category === option.value || category === option.id;
                 return (
                   <button
                     key={option.id}
                     type="button"
                     onClick={() => {
-                      setCategory(option.id);
+                      setCategory(option.value);
                       setSelectedCategoryParent(null);
                       setPage(1);
-                      updateProductsQuery({ category: option.id });
+                      updateProductsQuery({ category: option.value });
                     }}
                     className={clsx(
                       'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
@@ -577,9 +598,9 @@ export default function ProductsClient() {
         </p>
       )}
 
-      {loading && (
+      {showSkeleton && (
         <ul className={"grid gap-3 auto-rows-fr " + (compactMode ? 'grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')} aria-busy="true">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <li key={i} className="card p-1 sm:p-2 md:p-3 flex flex-col gap-2 h-full animate-pulse">
               <div className="relative w-full aspect-[4/3] sm:aspect-[3/2] lg:aspect-[4/3] xl:aspect-[3/2] 2xl:aspect-[4/3] overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800" />
               <div className="flex-1 min-h-10 md:min-h-12 space-y-2">

@@ -164,38 +164,89 @@ export async function listProducts(req: Request, res: Response) {
   const perPage = Math.min(Number.isFinite(perPageRaw) && perPageRaw > 0 ? perPageRaw : 10, 50)
   const search = String(req.query.search ?? '').trim()
   const sort = String(req.query.sort ?? 'relevance').trim()
-  const category = String(req.query.category ?? '').trim()
+  const categories = String(req.query.category ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
 
-  // build `where` dynamically to support search and a simple category filter
+  // build `where` dynamically to support search and category filter
   const conditions: Prisma.ProductWhereInput[] = []
-  if (search) {
-    conditions.push({ name: { contains: search, mode: 'insensitive' as const } })
-  }
-  if (category) {
-    // try to match an existing Category by slug or name; if found, filter by categoryId
-    const catParam = String(category).trim()
+
+  const categoryFilterMatches = async (value: string): Promise<Prisma.ProductWhereInput | null> => {
+    const catParam = value.trim()
+    if (!catParam) return null
+
+    let foundCat = null as { id: string; name: string; slug: string } | null
+
     if (looksLikeUuid(catParam)) {
-      conditions.push({ categoryId: catParam })
-    } else {
-    const catSlug = slugify(catParam)
-    const foundCat = await prisma.category.findFirst({ where: { OR: [{ slug: catSlug }, { name: { equals: catParam, mode: 'insensitive' as const } }] } })
-    if (foundCat) {
-      conditions.push({
-        OR: [
-          { categoryId: foundCat.id },
-          { categoryNames: { has: foundCat.name } },
-        ],
-      })
-    } else {
-      // fallback: search in name/description
-      conditions.push({
-        OR: [
-          { categoryNames: { has: category } },
-          { name: { contains: category, mode: 'insensitive' as const } },
-          { description: { contains: category, mode: 'insensitive' as const } },
-        ],
+      foundCat = await prisma.category.findUnique({
+        where: { id: catParam },
+        select: { id: true, name: true, slug: true },
       })
     }
+
+    if (!foundCat) {
+      const catSlug = slugify(catParam)
+      foundCat = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { id: catParam },
+            { slug: catSlug },
+            { slug: catParam },
+            { name: { equals: catParam, mode: 'insensitive' as const } },
+            { name: { contains: catParam, mode: 'insensitive' as const } },
+          ],
+        },
+        select: { id: true, name: true, slug: true },
+      })
+    }
+
+    if (!foundCat) {
+      return {
+        OR: [
+          { categoryName: { equals: catParam, mode: 'insensitive' as const } },
+          { categoryNames: { has: catParam } },
+          { categoryNames: { has: slugify(catParam) } },
+          { name: { contains: catParam, mode: 'insensitive' as const } },
+          { description: { contains: catParam, mode: 'insensitive' as const } },
+        ],
+      }
+    }
+
+    return {
+      OR: [
+        { categoryId: foundCat.id },
+        { categoryName: { equals: foundCat.name, mode: 'insensitive' as const } },
+        { categoryName: { equals: foundCat.slug, mode: 'insensitive' as const } },
+        { categoryNames: { has: foundCat.name } },
+        { categoryNames: { has: foundCat.slug } },
+        { categoryNames: { has: catParam } },
+      ],
+    }
+  }
+
+  if (search) {
+    const catCondition = await categoryFilterMatches(search)
+    if (catCondition) {
+      conditions.push(catCondition)
+    }
+
+    conditions.push({
+      OR: [
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+      ],
+    })
+  }
+
+  if (categories.length) {
+    const categoryConditions = (await Promise.all(categories.map(categoryFilterMatches))).filter(
+      (condition): condition is Prisma.ProductWhereInput => Boolean(condition),
+    )
+    if (categoryConditions.length === 1) {
+      conditions.push(categoryConditions[0] ?? {})
+    } else if (categoryConditions.length > 1) {
+      conditions.push({ OR: categoryConditions })
     }
   }
 

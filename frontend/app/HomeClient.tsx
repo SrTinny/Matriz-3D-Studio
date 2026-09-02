@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -22,9 +23,11 @@ type Product = {
   imageUrl?: string | null;
   tag?: 'Promoção' | 'Novo';
   category?: { id: string; name: string } | null;
+  categoryName?: string | null;
+  categoryNames?: string[];
 };
 
-type ProductsResponseFull = { items?: Product[]; total?: number };
+type ProductsResponseFull = { items?: Product[]; total?: number; page?: number; perPage?: number };
 
 type CategoryOption = {
   id: string;
@@ -232,16 +235,25 @@ function ScrollableRow({ children, className }: ScrollableRowProps) {
   );
 }
 
-type ShelfSectionProps = {
+type ProductCatalogSectionProps = {
   title: string;
   subtitle?: string;
-  ctaHref: string;
-  ctaLabel: string;
   products: Product[];
   onAddToCart: (productId: string) => Promise<void> | void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 };
 
-function ShelfSection({ title, subtitle, ctaHref, ctaLabel, products, onAddToCart }: ShelfSectionProps) {
+function ProductCatalogSection({
+  title,
+  subtitle,
+  products,
+  onAddToCart,
+  hasMore,
+  loadingMore,
+  onLoadMore,
+}: ProductCatalogSectionProps) {
   if (!products.length) return null;
 
   return (
@@ -251,47 +263,105 @@ function ShelfSection({ title, subtitle, ctaHref, ctaLabel, products, onAddToCar
           <h2 className="text-xl font-semibold text-[var(--color-text)]">{title}</h2>
           {subtitle ? <p className="text-sm text-slate-600 dark:text-slate-300">{subtitle}</p> : null}
         </div>
-        <Link href={ctaHref} className="shrink-0 text-sm font-medium text-brand hover:underline">
-          {ctaLabel}
+        <Link href="/products" className="shrink-0 text-sm font-medium text-brand hover:underline">
+          Ver todos os produtos
         </Link>
       </div>
 
-      <ScrollableRow>
-        <ul className="grid grid-flow-col auto-cols-[minmax(155px,1fr)] sm:auto-cols-[minmax(190px,1fr)] md:auto-cols-[minmax(220px,1fr)] gap-3 pb-1">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} searchTerm="" onAddToCart={onAddToCart} />
-          ))}
-        </ul>
-      </ScrollableRow>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} searchTerm="" onAddToCart={onAddToCart} />
+        ))}
+      </ul>
+
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={loadingMore}
+            className="btn border border-[var(--color-border)] hover:bg-[var(--color-hover)] disabled:cursor-wait disabled:opacity-60"
+          >
+            {loadingMore ? 'Carregando...' : 'Ver mais'}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
 
 export default function HomeClient() {
+  const searchParams = useSearchParams();
+  const selectedCategory = searchParams?.get('category') ?? '';
+  const router = useRouter();
+  const selectedCategories = useMemo(
+    () => selectedCategory.split(',').map((value) => value.trim()).filter(Boolean),
+    [selectedCategory],
+  );
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const homePageRef = useRef(1);
+  const homeRequestRef = useRef<{ id: number; controller: AbortController | null }>({ id: 0, controller: null });
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingGuestProduct, setPendingGuestProduct] = useState<string | null>(null);
 
-  const loadHomeData = useCallback(async () => {
+  const loadHomeData = useCallback(async (append = false) => {
+    homeRequestRef.current.controller?.abort();
+    const requestId = homeRequestRef.current.id + 1;
+    const controller = new AbortController();
+    homeRequestRef.current = { id: requestId, controller };
+
     try {
-      setLoading(true);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       setError(null);
 
-      const [productsRes, categoriesRes] = await Promise.all([
-        api.get<ProductsResponseFull>('/products', {
-          params: { page: 1, perPage: 36, sort: 'relevance' },
-        }),
-        api.get<CategoryOption[]>('/categories'),
+      const nextPage = append ? homePageRef.current + 1 : 1;
+      const categoryValues = selectedCategory.split(',').map((value) => value.trim()).filter(Boolean);
+      const requestPerCategory = categoryValues.length > 1
+        ? Math.max(1, Math.floor(8 / categoryValues.length))
+        : 8;
+      const requestCategories = categoryValues.length ? categoryValues : [''];
+      const productRequests = requestCategories.map((category) => api.get<ProductsResponseFull>('/products', {
+        params: {
+          page: nextPage,
+          perPage: requestPerCategory,
+          sort: 'relevance',
+          ...(category ? { category } : {}),
+        },
+        signal: controller.signal,
+      }));
+      const categoriesRequest = append ? null : api.get<CategoryOption[]>('/categories');
+      const [productResponses, categoriesRes] = await Promise.all([
+        Promise.all(productRequests),
+        categoriesRequest,
       ]);
+      if (requestId !== homeRequestRef.current.id) return;
 
-      setProducts(productsRes.data?.items ?? []);
-      setCategories(categoriesRes.data ?? []);
+      const seenProductIds = new Set<string>();
+      const nextProducts = productResponses.flatMap((response) => response.data?.items ?? []).filter((product) => {
+        if (seenProductIds.has(product.id)) return false;
+        seenProductIds.add(product.id);
+        return true;
+      });
+      const totalProducts = productResponses.reduce(
+        (total, response) => total + Number(response.data?.total ?? 0),
+        0,
+      );
+      setProducts((current) => append ? [...current, ...nextProducts] : nextProducts);
+      homePageRef.current = nextPage;
+      setHasMore(nextPage * requestPerCategory * requestCategories.length < totalProducts);
+      if (categoriesRes) setCategories(categoriesRes.data ?? []);
     } catch (err: unknown) {
+      if (requestId !== homeRequestRef.current.id || (axios.isAxiosError(err) && err.code === 'ERR_CANCELED')) return;
       let message = 'Nao foi possivel carregar a home no momento.';
       if (axios.isAxiosError(err)) {
         message =
@@ -303,13 +373,25 @@ export default function HomeClient() {
       }
       setError(message);
     } finally {
-      setLoading(false);
+      if (requestId !== homeRequestRef.current.id) return;
+      if (append) setLoadingMore(false);
+      else setLoading(false);
     }
-  }, []);
+  }, [selectedCategory]);
 
   useEffect(() => {
     void loadHomeData();
-  }, [loadHomeData]);
+  }, [loadHomeData, selectedCategory]);
+
+  useEffect(() => {
+    if (!loading) {
+      setShowSkeleton(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => setShowSkeleton(true), 180);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
   useEffect(() => {
     if (HERO_SLIDES.length <= 1) return;
@@ -332,8 +414,8 @@ export default function HomeClient() {
 
   const categoryShortcuts = useMemo(() => {
     if (categories.length) {
-      return categories.slice(0, 12).map((category) => ({
-        value: category.id,
+      return categories.map((category) => ({
+        value: category.slug ?? category.name,
         label: category.name,
       }));
     }
@@ -341,28 +423,25 @@ export default function HomeClient() {
     const map = new Map<string, string>();
     for (const product of products) {
       if (!product.category?.id || !product.category?.name) continue;
-      if (!map.has(product.category.id)) {
-        map.set(product.category.id, product.category.name);
+      const key = product.category.id;
+      if (!map.has(key)) {
+        map.set(key, product.category.name);
       }
     }
 
-    return Array.from(map.entries()).slice(0, 12).map(([value, label]) => ({ value, label }));
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [categories, products]);
 
-  const featuredProducts = useMemo(
-    () => products.filter((product) => Boolean(product.tag)).slice(0, 10),
-    [products],
-  );
-
-  const bestDeals = useMemo(
-    () => [...products].sort((a, b) => a.price - b.price).slice(0, 10),
-    [products],
-  );
-
-  const outOfStockProducts = useMemo(
-    () => products.filter((product) => product.stock <= 0).slice(0, 10),
-    [products],
-  );
+  const toggleCategory = useCallback((value: string) => {
+    const nextCategories = selectedCategories.includes(value)
+      ? selectedCategories.filter((category) => category !== value)
+      : [...selectedCategories, value];
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (nextCategories.length) params.set('category', nextCategories.join(','));
+    else params.delete('category');
+    const query = params.toString();
+    router.replace(query ? `/?${query}` : '/');
+  }, [router, searchParams, selectedCategories]);
 
   const addToCart = useCallback(async (productId: string) => {
     const user = await hydrateSession();
@@ -406,7 +485,7 @@ export default function HomeClient() {
     window.location.href = '/login';
   }
 
-  if (loading) {
+  if (showSkeleton) {
     return <HomePageSkeleton />;
   }
 
@@ -465,6 +544,8 @@ export default function HomeClient() {
                     alt={heroProduct.name}
                     fill
                     sizes="220px"
+                    priority
+                    quality={75}
                     className="object-cover"
                   />
                 </div>
@@ -508,20 +589,30 @@ export default function HomeClient() {
 
         <ScrollableRow>
           <div className="flex gap-2 pb-1">
-            <Link
-              href="/products"
-              className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium whitespace-nowrap hover:bg-[var(--color-hover)]"
+            <button
+              type="button"
+              onClick={() => router.replace('/')}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap hover:bg-[var(--color-hover)] ${
+                selectedCategories.length === 0
+                  ? 'border-brand bg-brand/10 text-brand'
+                  : 'border-[var(--color-border)]'
+              }`}
             >
               Todas
-            </Link>
+            </button>
             {categoryShortcuts.map((category) => (
-              <Link
+              <button
+                type="button"
                 key={category.value}
-                href={`/products?category=${encodeURIComponent(category.value)}`}
-                className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium whitespace-nowrap hover:bg-[var(--color-hover)]"
+                onClick={() => toggleCategory(category.value)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap hover:bg-[var(--color-hover)] ${
+                  selectedCategories.includes(category.value)
+                    ? 'border-brand bg-brand/10 text-brand'
+                    : 'border-[var(--color-border)]'
+                }`}
               >
                 {category.label}
-              </Link>
+              </button>
             ))}
           </div>
         </ScrollableRow>
@@ -558,20 +649,14 @@ export default function HomeClient() {
         </div>
       </section>
 
-      <ShelfSection
-        title="Peças em Destaque"
-        ctaHref="/products?sort=price_asc"
-        ctaLabel="Ver mais ofertas"
-        products={featuredProducts}
+      <ProductCatalogSection
+        title="Produtos catalogados"
+        subtitle={selectedCategories.length ? 'Produtos das categorias selecionadas.' : 'Algumas peças do catálogo para você explorar.'}
+        products={products}
         onAddToCart={addToCart}
-      />
-
-      <ShelfSection
-        title="Disponíveis para produção imediata"
-        ctaHref="/products"
-        ctaLabel="Explorar catalogo"
-        products={outOfStockProducts}
-        onAddToCart={addToCart}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={() => void loadHomeData(true)}
       />
     </main>
   );

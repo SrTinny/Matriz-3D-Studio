@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import HeaderBar from './_components/HeaderBar';
 import Footer from './_components/Footer';
+import FloatingContactButtons from './_components/FloatingContactButtons';
 import Skeleton from './_components/Skeleton';
 import MainContent from './_components/MainContent';
 
@@ -50,6 +51,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Footer global */}
             <Footer />
+
+            <FloatingContactButtons />
           </div>
         </ThemeProvider>
       </body>

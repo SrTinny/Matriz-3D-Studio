@@ -88,7 +88,9 @@ export default function ProductCard({ product, searchTerm, onAddToCart }: Props)
           alt={product.name}
           fill
           sizes="(max-width:768px) 100vw, (max-width:1024px) 50vw, 33vw"
-          className="object-cover"
+          loading="lazy"
+          quality={72}
+          className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
         />
   </div>
   </Link>
