@@ -21,6 +21,12 @@ const benefitItems = [
     cta: { label: "Falar com suporte", href: "/contact" },
     icon: "shield",
   },
+  {
+    title: "Licença clara",
+    description: "Regras de uso explicadas sem ruído.",
+    cta: { label: "Ver regras de uso", href: "/privacy" },
+    icon: "license",
+  },
 ] as const;
 
 const footerColumns: Array<{ title: string; links: FooterLink[] }> = [
@@ -83,6 +89,14 @@ function renderBenefitIcon(icon: (typeof benefitItems)[number]["icon"]) {
         <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3l7 3v6c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V6l7-3z" />
           <path d="M9.5 12.5l2 2 4-4" />
+        </svg>
+      );
+    case "license":
+      return (
+        <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 3h9l3 3v15H6z" />
+          <path d="M15 3v4h4M9 12h6M9 16h4" />
+          <path d="m9 8 1 1 2-2" />
         </svg>
       );
     default:

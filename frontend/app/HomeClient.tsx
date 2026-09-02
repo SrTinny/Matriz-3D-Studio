@@ -47,8 +47,7 @@ type HeroSlide = {
 type QuickAction = {
   title: string;
   description: string;
-  href: string;
-  icon: 'truck' | 'shield' | 'ticket' | 'bolt' | 'gift' | 'credit';
+  icon: 'figure' | 'keychain' | 'sign' | 'logo' | 'decor' | 'prototype' | 'utensils' | 'gift';
 };
 
 const HERO_SLIDES: HeroSlide[] = [
@@ -80,40 +79,44 @@ const HERO_SLIDES: HeroSlide[] = [
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    title: 'Entrega digital',
-    description: 'Acesso rápido aos seus arquivos e coleções.',
-    href: '/products',
-    icon: 'truck',
+    title: 'Action figures',
+    description: 'Personagens e colecionáveis sob medida.',
+    icon: 'figure',
   },
   {
-    title: 'Pagamento seguro',
-    description: 'Fluxo protegido e transparente.',
-    href: '/privacy',
-    icon: 'shield',
+    title: 'Chaveiros personalizados',
+    description: 'Peças únicas para presentear ou divulgar.',
+    icon: 'keychain',
   },
   {
-    title: 'Lançamentos',
-    description: 'Novidades e peças destacadas do catálogo.',
-    href: '/products?sort=price_asc',
-    icon: 'ticket',
+    title: 'Letreiros',
+    description: 'Identidade visual em volume e destaque.',
+    icon: 'sign',
   },
   {
-    title: 'Coleções sob medida',
-    description: 'Peças para briefing e projetos específicos.',
-    href: '/contact',
-    icon: 'bolt',
+    title: 'Logos',
+    description: 'Sua marca transformada em uma peça 3D.',
+    icon: 'logo',
   },
   {
-    title: 'Assets para cena',
-    description: 'Descobertas organizadas por estilo e uso.',
-    href: '/products',
+    title: 'Decoração em geral',
+    description: 'Objetos decorativos para todos os ambientes.',
+    icon: 'decor',
+  },
+  {
+    title: 'Prototipagem',
+    description: 'Valide ideias e formatos antes da produção.',
+    icon: 'prototype',
+  },
+  {
+    title: 'Utensílios',
+    description: 'Soluções práticas feitas para sua rotina.',
+    icon: 'utensils',
+  },
+  {
+    title: 'Brindes para datas especiais',
+    description: 'Lembranças personalizadas para celebrar.',
     icon: 'gift',
-  },
-  {
-    title: 'Licença clara',
-    description: 'Regras de uso explicadas sem ruído.',
-    href: '/privacy',
-    icon: 'credit',
   },
 ];
 
@@ -123,51 +126,63 @@ function formatBRL(value: number) {
 
 function renderQuickActionIcon(icon: QuickAction['icon']) {
   switch (icon) {
-    case 'truck':
+    case 'figure':
       return (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="1" y="3" width="15" height="13" rx="2" />
-          <path d="M16 8h4l3 3v5h-7" />
-          <circle cx="5.5" cy="18.5" r="2.5" />
-          <circle cx="18.5" cy="18.5" r="2.5" />
+          <circle cx="12" cy="5" r="2.5" />
+          <path d="M8 21l1.5-7.5L7 11l2-3 3 2 3-2 2 3-2.5 2.5L16 21" />
+          <path d="M9.5 14h5" />
         </svg>
       );
-    case 'shield':
+    case 'keychain':
       return (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3l7 3v6c0 5-3.5 8.5-7 9-3.5-.5-7-4-7-9V6l7-3z" />
-          <path d="M9.5 12.5l2 2 4-4" />
+          <circle cx="8" cy="8" r="4" />
+          <circle cx="8" cy="8" r="1" />
+          <path d="M11 11l8 8" />
+          <path d="M15 15l2-2 3 3-2 2" />
         </svg>
       );
-    case 'ticket':
+    case 'sign':
       return (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 8a2 2 0 012-2h14a2 2 0 012 2v3a2 2 0 010 4v3a2 2 0 01-2 2H5a2 2 0 01-2-2v-3a2 2 0 010-4V8z" />
-          <path d="M12 7v10" />
+          <path d="M5 4h14v11H5z" />
+          <path d="M12 15v5M8 20h8M8 8h8M8 11h5" />
         </svg>
       );
-    case 'bolt':
+    case 'logo':
       return (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+          <path d="M12 3l2.2 5.2L20 10l-4.5 3.8L16.8 20 12 16.8 7.2 20l1.3-6.2L4 10l5.8-1.8L12 3z" />
+        </svg>
+      );
+    case 'decor':
+      return (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 20V9l7-5 7 5v11" />
+          <path d="M3 20h18M9 20v-5h6v5" />
+          <path d="M12 4V2" />
+        </svg>
+      );
+    case 'prototype':
+      return (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 7h7v7H4zM13 10h7v7h-7z" />
+          <path d="M11 10l2 2M8 14l5-4M11 7h2M7 17h2" />
+        </svg>
+      );
+    case 'utensils':
+      return (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 3v7M4.5 3v4a2.5 2.5 0 005 0V3M7 10v11" />
+          <path d="M16 3v18M16 3c3 2 3 6 0 8M16 11h3" />
         </svg>
       );
     case 'gift':
       return (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="8" width="18" height="13" rx="2" />
-          <path d="M12 8v13" />
-          <path d="M3 12h18" />
-          <path d="M7.5 8a2.5 2.5 0 112.5-2.5V8h-2.5z" />
-          <path d="M16.5 8A2.5 2.5 0 0014 5.5V8h2.5z" />
-        </svg>
-      );
-    case 'credit':
-      return (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="5" width="20" height="14" rx="2" />
-          <path d="M2 10h20" />
-          <path d="M6 15h4" />
+          <path d="M12 8v13M3 12h18M7.5 8a2.5 2.5 0 112.5-2.5V8M16.5 8A2.5 2.5 0 0014 5.5V8" />
         </svg>
       );
     default:
@@ -622,29 +637,28 @@ export default function HomeClient() {
         <ScrollableRow className="sm:hidden">
           <div className="flex gap-2 pb-1">
             {QUICK_ACTIONS.map((action) => (
-              <Link
+              <div
                 key={action.title}
-                href={action.href}
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-medium whitespace-nowrap hover:bg-[var(--color-hover)]"
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-brand">
                   {renderQuickActionIcon(action.icon)}
                 </span>
                 <span>{action.title}</span>
-              </Link>
+              </div>
             ))}
           </div>
         </ScrollableRow>
 
-        <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-3">
           {QUICK_ACTIONS.map((action) => (
-            <Link key={action.title} href={action.href} className="card p-3 space-y-2 hover:shadow-xl transition-shadow">
+            <div key={action.title} className="card p-3 space-y-2 hover:shadow-xl transition-shadow">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand">
                 {renderQuickActionIcon(action.icon)}
               </span>
               <h3 className="text-sm font-semibold leading-tight">{action.title}</h3>
               <p className="text-xs text-slate-600 dark:text-slate-300">{action.description}</p>
-            </Link>
+            </div>
           ))}
         </div>
       </section>
