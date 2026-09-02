@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import logo from '../../assets/logo.png';
+import BrandLogo from '../_components/BrandLogo';
 import Link from 'next/link';
 
 /* ===================== Helpers ===================== */
@@ -177,11 +177,12 @@ export default function RegisterPage() {
     <main className="min-h-screen flex items-start justify-center px-4 py-4 md:items-center md:py-6">
       <div className="card w-full max-w-2xl p-4 space-y-3 md:p-5 md:space-y-4">
         <Link href="/" className="mx-auto flex w-full max-w-[200px] justify-center" aria-label="Ir para a página inicial">
-          <Image
-            src={logo}
+            <BrandLogo
+            width={360}
+            height={150}
             alt="Matriz 3D Studio"
             priority
-            className="h-11 w-auto max-w-full object-contain md:h-13"
+            className="h-11 w-full object-cover object-center md:h-13"
           />
         </Link>
 

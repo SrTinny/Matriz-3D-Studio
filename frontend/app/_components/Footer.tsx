@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BrandLogo from './BrandLogo';
 
 type FooterLink = {
   label: string;
@@ -175,8 +176,8 @@ export default function Footer() {
         <div className="border-t border-white/10">
           <div className="mx-auto max-w-screen-xl px-4 py-6 sm:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-              <Link href="/" className="text-xl font-semibold tracking-tight text-white">
-                Matriz 3D Studio
+              <Link href="/" className="inline-flex h-14 w-48 items-center" aria-label="Matriz 3D Studio - página inicial">
+                <BrandLogo variant="dark" width={192} height={56} className="h-14 w-full object-cover object-center" />
               </Link>
 
               <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">

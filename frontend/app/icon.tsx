@@ -9,7 +9,7 @@ export const size = {
 };
 export const contentType = 'image/png';
 
-const logoPath = join(process.cwd(), 'assets', 'logo.png');
+const logoPath = join(process.cwd(), 'assets', 'Matriz 3D Studio logo preto.png');
 const logoDataUri = `data:image/png;base64,${readFileSync(logoPath).toString('base64')}`;
 
 export default function Icon() {

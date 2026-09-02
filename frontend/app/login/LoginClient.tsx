@@ -12,7 +12,7 @@ import { mergeGuestCartToServer } from '@/lib/cart';
 import { setCurrentUser } from '@/lib/auth';
 import { setCsrfToken } from '@/lib/api';
 import { setAuthSessionHint } from '@/lib/auth-store';
-import logo from '../../assets/logo.png';
+import BrandLogo from '../_components/BrandLogo';
 import Link from 'next/link';
 
 const schema = z.object({
@@ -75,11 +75,12 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="card w-full max-w-md p-8 space-y-6">
         <Link href="/" className="flex justify-center" aria-label="Ir para a página inicial">
-          <Image
-            src={logo}
+            <BrandLogo
+            width={360}
+            height={150}
             alt="Matriz 3D Studio"
             priority
-            className="h-36 w-auto max-w-full object-contain"
+            className="h-36 w-full object-cover object-center"
           />
         </Link>
 

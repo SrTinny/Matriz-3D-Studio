@@ -10,6 +10,7 @@ import DesktopNav from './DesktopNav';
 import MobileNav from './MobileNav';
 import BottomNavBar from './BottomNavBar';
 import { CartIcon } from '@/app/_components/Icons';
+import BrandLogo from './BrandLogo';
 // clsx not used here; navigation components handle conditional classes
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -209,7 +210,9 @@ export default function HeaderBar() {
     >
   <div className="container mx-auto flex items-center gap-3 px-4 sm:px-6 lg:px-8 py-3">
         {/* Logo - visible brand link */}
-  <Link href="/" className="hidden md:inline-flex shrink-0 items-center font-bold text-lg text-brand" aria-label="Matriz 3D Studio - página inicial">Matriz 3D Studio</Link>
+  <Link href="/" className="hidden md:inline-flex h-12 w-44 shrink-0 items-center" aria-label="Matriz 3D Studio - página inicial">
+    <BrandLogo width={176} height={48} className="h-12 w-full object-cover object-center" priority />
+  </Link>
 
         <Link
           href="/account"
