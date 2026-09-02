@@ -7,7 +7,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/* ====== Auth / Users ====== */
+/**
+ * ====== Auth / Users ======
+ */
 enum Role {
   USER
   ADMIN
@@ -19,92 +21,139 @@ enum ProductTag {
 }
 
 model User {
-  id              String   @id @default(uuid())
-  name            String
-  email           String   @unique
-  password        String
-  cpf             String?  @unique
-  phone           String?
-  role            Role     @default(USER)
-  isActive        Boolean  @default(false)
-  activationToken String?  @unique
+  id                       String                @id @default(uuid())
+  name                     String
+  email                    String                @unique
+  password                 String
+  cpf                      String?               @unique
+  phone                    String?
+  role                     Role                  @default(USER)
+  isActive                 Boolean               @default(false)
+  activationToken          String?               @unique
   activationTokenExpiresAt DateTime?
-  selectedAddressId String?
-  selectedAddress Address? @relation("SelectedAddress", fields: [selectedAddressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  addresses       Address[] @relation("UserAddresses")
-  carts           Cart[]
-  refreshSessions RefreshTokenSession[]
-  orders          Order[]  @relation("UserOrders")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  selectedAddressId        String?
+  selectedAddress          Address?              @relation("SelectedAddress", fields: [selectedAddressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  addresses                Address[]             @relation("UserAddresses")
+  carts                    Cart[]
+  refreshSessions          RefreshTokenSession[]
+  orders                   Order[]               @relation("UserOrders")
+  sales                    Sale[]                @relation("SaleSeller")
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
 
   @@index([selectedAddressId])
 }
 
 model Address {
-  id             String   @id @default(uuid())
-  userId         String
-  user           User     @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
-  selectedByUsers User[]  @relation("SelectedAddress")
-  label          String
-  zipCode        String
-  state          String
-  city           String
-  neighborhood   String
-  street         String
-  number         String
-  complement     String?
-  orders         Order[]  @relation("AddressOrders")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
+  selectedByUsers User[]   @relation("SelectedAddress")
+  label           String
+  zipCode         String
+  state           String
+  city            String
+  neighborhood    String
+  street          String
+  number          String
+  complement      String?
+  orders          Order[]  @relation("AddressOrders")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([userId])
 }
 
 model RefreshTokenSession {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   userId              String
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   family              String
-  tokenHash           String   @unique
+  tokenHash           String    @unique
   expiresAt           DateTime
   revokedAt           DateTime?
   revokedReason       String?
   replacedByTokenHash String?
   userAgent           String?
   ipAddress           String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([userId])
   @@index([family])
   @@index([expiresAt])
 }
 
-/* ====== Produtos / Carrinho ====== */
+/**
+ * ====== Produtos / Carrinho ======
+ */
 model Product {
-  id          String     @id @default(uuid())
-  name        String
-  slug        String     @unique      // <- chave única p/ upsert/skipDuplicates
-  description String?
-  price       Float
-  wholesalePrice Float?
-  wholesaleMinQuantity Int? 
-  heightCm    Float?
-  weightGrams Float?
-  printHours  Float?
-  wholesaleEnabled Boolean @default(false)
-  stock       Int        @default(0)
-  imageUrl    String?
-  tag         ProductTag?
-  categoryId  String?
-  category    Category?  @relation(fields: [categoryId], references: [id])
-  categoryName String?
-  categoryNames String[] @default([])
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id                   String      @id @default(uuid())
+  name                 String
+  slug                 String      @unique // <- chave única p/ upsert/skipDuplicates
+  description          String?
+  price                Float
+  wholesalePrice       Float?
+  wholesaleMinQuantity Int?
+  heightCm             Float?
+  weightGrams          Float?
+  printHours           Float?
+  wholesaleEnabled     Boolean     @default(false)
+  stock                Int         @default(0)
+  imageUrl             String?
+  tag                  ProductTag?
+  categoryId           String?
+  category             Category?   @relation(fields: [categoryId], references: [id])
+  categoryName         String?
+  categoryNames        String[]    @default([])
+  cartItems            CartItem[]
+  orderItems           OrderItem[]
+  saleItems            SaleItem[]
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+}
+
+enum SaleStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Sale {
+  id              String     @id @default(uuid())
+  sellerId        String
+  seller          User       @relation("SaleSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  customerName    String?
+  customerContact String?
+  paymentMethod   String
+  status          SaleStatus @default(PENDING)
+  total           Float
+  dueDate         DateTime?
+  completedAt     DateTime?
+  notes           String?
+  items           SaleItem[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([dueDate])
+}
+
+model SaleItem {
+  id          String   @id @default(uuid())
+  saleId      String
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productName String
+  quantity    Int      @default(1)
+  unitPrice   Float
+
+  @@index([saleId])
+  @@index([productId])
 }
 
 model Category {
@@ -117,21 +166,21 @@ model Category {
 }
 
 model Cart {
-  id        String   @id @default(uuid())
-  userId    String   @unique   // <- garante que cada user tenha só 1 cart
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id        String     @id @default(uuid())
+  userId    String     @unique // <- garante que cada user tenha só 1 cart
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   items     CartItem[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   cartId    String
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  quantity  Int      @default(1)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  quantity  Int     @default(1)
 
   @@index([cartId])
   @@index([productId])
@@ -145,41 +194,41 @@ enum OrderStatus {
 }
 
 model Order {
-  id                String       @id @default(uuid())
-  userId            String
-  user              User         @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
-  addressId         String?
-  address           Address?     @relation("AddressOrders", fields: [addressId], references: [id], onDelete: SetNull)
-  
-  // Endereço "congelado" na compra
-  shippingLabel     String
-  shippingZipCode   String
-  shippingState     String
-  shippingCity      String
-  shippingNeighborhood String
-  shippingStreet    String
-  shippingNumber    String
-  shippingComplement String?
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  addressId String?
+  address   Address? @relation("AddressOrders", fields: [addressId], references: [id], onDelete: SetNull)
 
-  status            OrderStatus  @default(PENDING)
-  paymentMethod     String       // "PIX" | "CARD"
-  total             Float
-  items             OrderItem[]
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  // Endereço "congelado" na compra
+  shippingLabel        String
+  shippingZipCode      String
+  shippingState        String
+  shippingCity         String
+  shippingNeighborhood String
+  shippingStreet       String
+  shippingNumber       String
+  shippingComplement   String?
+
+  status        OrderStatus @default(PENDING)
+  paymentMethod String // "PIX" | "CARD"
+  total         Float
+  items         OrderItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([userId])
   @@index([addressId])
 }
 
 model OrderItem {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity  Int      @default(1)
-  price     Float    // preço unitário congelado no momento da compra
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int     @default(1)
+  price     Float // preço unitário congelado no momento da compra
 
   @@index([orderId])
   @@index([productId])

@@ -269,6 +269,12 @@ export default function AdminProductsPage() {
                 Calculadora de orçamento
               </button>
               <button
+                onClick={() => window.location.href = '/admin/vendas'}
+                className="btn btn-outline whitespace-nowrap w-full sm:w-auto"
+              >
+                Nova venda / histórico
+              </button>
+              <button
                 onClick={startCreate}
                 className="btn border border-black/10 dark:border-white/10 whitespace-nowrap w-full sm:w-auto"
               >
