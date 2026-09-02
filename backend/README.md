@@ -61,6 +61,7 @@ npx prisma db seed
 - `JWT_SECRET` (obrigatória)
 - `PORT` (default `3000`)
 - `FRONTEND_URL`
+- `CORS_ORIGINS` (origens adicionais separadas por vírgula, por exemplo `https://www.matriz3ds.com.br,https://matriz3ds.com.br`)
 - `JWT_ACCESS_TOKEN_MINUTES` (default `15`)
 - `JWT_REFRESH_TOKEN_DAYS` (default `30`)
 - `AUTH_ACTIVATION_TOKEN_HOURS` (default `24`)

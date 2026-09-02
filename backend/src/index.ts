@@ -45,9 +45,15 @@ const staticAllowed = [
   'http://localhost:3001',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
+  'https://www.matriz3ds.com.br',
+  'https://matriz3ds.com.br',
+  'https://matriz-3-d-studio.vercel.app',
 ].filter(Boolean)
 
-const envAllowed = parseAllowedOrigins(env.frontendUrl)
+const envAllowed = [
+  ...parseAllowedOrigins(env.frontendUrl),
+  ...parseAllowedOrigins(env.corsOrigins),
+]
 const allowedOrigins = [...new Set([...staticAllowed, ...envAllowed])]
 
 const vercelPreviewRe = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i

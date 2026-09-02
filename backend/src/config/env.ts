@@ -57,6 +57,7 @@ export const env = {
   port: readPositiveInt('PORT', 3000),
   jwtSecret: readRequiredString('JWT_SECRET'),
   frontendUrl: process.env.FRONTEND_URL?.trim() || undefined,
+  corsOrigins: process.env.CORS_ORIGINS?.trim() || undefined,
   accessTokenMinutes: readPositiveInt('JWT_ACCESS_TOKEN_MINUTES', 15),
   refreshTokenDays: readPositiveInt('JWT_REFRESH_TOKEN_DAYS', 30),
   activationTokenHours: readPositiveInt('AUTH_ACTIVATION_TOKEN_HOURS', 24),
