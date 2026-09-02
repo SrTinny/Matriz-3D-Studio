@@ -129,6 +129,7 @@ model Sale {
   paymentMethod   String
   status          SaleStatus @default(PENDING)
   total           Float
+  amountPaid      Float      @default(0)
   dueDate         DateTime?
   completedAt     DateTime?
   notes           String?
