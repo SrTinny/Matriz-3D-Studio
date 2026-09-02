@@ -34,14 +34,14 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
   return (
     <article
       key={product.id}
-      className={"card h-full flex flex-col " + (compact ? 'p-2 space-y-2 text-left justify-between' : 'p-4 space-y-2')}
+      className={"card flex min-w-0 gap-3 " + (compact ? 'p-2 text-left' : 'flex-col p-3 sm:flex-row sm:items-center sm:p-4')}
       aria-label={`Produto ${product.name}`}>
 
-  <div className={"relative aspect-square w-full overflow-hidden rounded"} style={{ background: 'var(--color-card)' }}>
-        <Image src={src} alt={product.name} fill style={{ objectFit: 'cover' }} sizes="(max-width: 640px) 100vw, 400px" />
+  <div className={"relative shrink-0 overflow-hidden rounded " + (compact ? 'h-20 w-20' : 'h-24 w-24 sm:h-28 sm:w-28')} style={{ background: 'var(--color-card)' }}>
+        <Image src={src} alt={product.name} fill style={{ objectFit: 'cover' }} sizes="112px" />
       </div>
 
-      <Link href={`/products/${product.id}`} className="no-underline text-inherit flex flex-col flex-grow min-h-0">
+      <Link href={`/products/${product.id}`} className="no-underline text-inherit flex min-w-0 flex-1 flex-col justify-center">
         <div className={"flex flex-col " + (compact ? 'gap-1' : 'sm:flex-row sm:items-start sm:justify-between gap-2') + " min-h-0"}>
           <div className="flex flex-col gap-1">
             <h3 className={"font-semibold leading-tight " + (compact ? 'text-sm line-clamp-2' : '')} title={product.name}>{product.name}</h3>
@@ -70,7 +70,7 @@ export default function ProductAdminCard({ product, onEdit, onRemove, removingId
         {/* footer interno removido para evitar duplicação; o footer real está abaixo do Link */}
       </Link>
 
-      <div className={"mt-2 " + (compact ? 'flex flex-col items-start gap-2' : 'flex items-center justify-between')}>
+      <div className={"mt-2 shrink-0 " + (compact ? 'flex flex-col items-start gap-2' : 'flex items-center justify-between sm:mt-0 sm:flex-col sm:items-end sm:gap-2')}>
         <div className="flex flex-col">
           <span className={"text-brand font-semibold " + (compact ? 'text-sm' : '')} style={{ color: 'var(--color-brand)' }}>{formatBRL(product.price)}</span>
           {product.wholesaleEnabled && typeof product.wholesalePrice === 'number' && (

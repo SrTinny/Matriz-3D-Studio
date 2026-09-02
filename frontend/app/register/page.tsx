@@ -1,7 +1,6 @@
 // app/register/page.tsx
 "use client";
 
-import Image from 'next/image';
 import { useEffect, useState, type FormEvent } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { IMaskInput } from "react-imask";

@@ -78,22 +78,6 @@ export default function MobileNav({ open, setOpen, authed, admin, theme, toggleT
             </button>
           </div>
 
-          <div className="mt-2">
-            <button
-              onClick={() => {
-                try {
-                  const current = localStorage.getItem('ui:density');
-                  const next = current === 'compact' ? 'comfortable' : 'compact';
-                  localStorage.setItem('ui:density', next);
-                  window.dispatchEvent(new CustomEvent('ui:density:changed', { detail: next }));
-                } catch {}
-              }}
-              className="w-full rounded-md border border-black/10 px-3 py-2 text-left text-sm dark:border-white/10"
-            >
-              Alternar densidade
-            </button>
-          </div>
-
           <div className="mt-3">
             {!authed ? (
               <>

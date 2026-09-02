@@ -7,7 +7,6 @@ import { hydrateSession } from "@/lib/auth";
 import { toast } from "sonner";
 import ProductFormModal from './ProductFormModal';
 import ProductAdminCard from './ProductAdminCard';
-import ProductTableRow from './ProductTableRow';
 import DashboardStats from './DashboardStats';
 import PaginationControls from './PaginationControls';
 import type { AdminProduct } from './productTypes';
@@ -28,24 +27,6 @@ export default function AdminProductsPage() {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showOnlyOutOfStock, setShowOnlyOutOfStock] = useState(false);
-  const [compactMode, setCompactMode] = useState(false);
-
-  // Persistir preferência de densidade no localStorage
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem('ui:density');
-      if (v === 'compact') setCompactMode(true);
-    } catch {}
-    const onDensity = (e: Event) => {
-      try {
-        const detail = (e as CustomEvent).detail as string;
-        setCompactMode(detail === 'compact');
-      } catch {}
-    };
-    window.addEventListener('ui:density:changed', onDensity as EventListener);
-    return () => window.removeEventListener('ui:density:changed', onDensity as EventListener);
-  }, []);
-
   // Guard (auth + role)
   useEffect(() => {
     let mounted = true;
@@ -173,47 +154,6 @@ export default function AdminProductsPage() {
     }
   }
 
-  // Handlers para InlineEditCell
-  async function handleSavePrice(id: string, newPrice: number) {
-    try {
-      console.debug("handleSavePrice start", { id, newPrice });
-      const res = await api.patch(`/products/${id}`, { price: newPrice });
-      console.debug("handleSavePrice response", res?.data);
-      toast.success('Preço atualizado');
-      await load();
-      console.debug("handleSavePrice load finished");
-    } catch (e: unknown) {
-      console.error("handleSavePrice error", e);
-      let msg = 'Erro ao atualizar preço';
-      if (axios.isAxiosError(e)) {
-        msg = (e.response?.data as { message?: string } | undefined)?.message ?? e.message ?? msg;
-      } else if (e instanceof Error) {
-        msg = e.message;
-      }
-      toast.error(msg);
-    }
-  }
-
-  async function handleSaveStock(id: string, newStock: number) {
-    try {
-      console.debug("handleSaveStock start", { id, newStock });
-      const res = await api.patch(`/products/${id}`, { stock: newStock });
-      console.debug("handleSaveStock response", res?.data);
-      toast.success('Estoque atualizado');
-      await load();
-      console.debug("handleSaveStock load finished");
-    } catch (e: unknown) {
-      console.error("handleSaveStock error", e);
-      let msg = 'Erro ao atualizar estoque';
-      if (axios.isAxiosError(e)) {
-        msg = (e.response?.data as { message?: string } | undefined)?.message ?? e.message ?? msg;
-      } else if (e instanceof Error) {
-        msg = e.message;
-      }
-      toast.error(msg);
-    }
-  }
-
   // logout gerenciado pelo HeaderBar global
 
   if (!ready) return null;
@@ -247,8 +187,8 @@ export default function AdminProductsPage() {
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Buscar produtos por nome"
           />
-          <div className="flex flex-wrap items-center gap-2 flex-shrink-0 sm:justify-end">
-              <button onClick={load} className="btn btn-primary whitespace-nowrap">
+            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+              <button onClick={load} className="btn btn-primary w-full whitespace-nowrap sm:w-auto">
                 {loading ? "Buscando…" : "Buscar"}
               </button>
               {/* compact toggle intentionally removed from responsive UI per request */}
@@ -264,19 +204,19 @@ export default function AdminProductsPage() {
               </select>
               <button
                 onClick={() => window.location.href = '/admin/orcamento'}
-                className="btn btn-outline whitespace-nowrap w-full sm:w-auto"
+                className="btn btn-outline w-full whitespace-nowrap sm:w-auto"
               >
                 Calculadora de orçamento
               </button>
               <button
                 onClick={() => window.location.href = '/admin/vendas'}
-                className="btn btn-outline whitespace-nowrap w-full sm:w-auto"
+                className="btn btn-outline w-full whitespace-nowrap sm:w-auto"
               >
                 Nova venda / histórico
               </button>
               <button
                 onClick={startCreate}
-                className="btn border border-black/10 dark:border-white/10 whitespace-nowrap w-full sm:w-auto"
+                className="btn w-full whitespace-nowrap border border-black/10 dark:border-white/10 sm:w-auto"
               >
                 Novo produto
               </button>
@@ -287,78 +227,19 @@ export default function AdminProductsPage() {
         </div>
       </section>
 
-      {/* Lista mobile (cards) */}
-      {!loading && filteredItems.length > 0 && (
-        <>
-          {showOnlyOutOfStock && (
-            <div className="text-sm text-slate-600 mb-2">Filtro: <strong>Somente sem estoque</strong></div>
-          )}
-          {/* Mobile card grid: compactMode => 3 cols, comfortable => 2 cols (responsive) */}
-          <section className={"grid gap-3 md:hidden items-stretch auto-rows-fr " + (compactMode ? 'grid-cols-3 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-2')}>
-            {filteredItems.map((p) => (
-              <ProductAdminCard key={p.id} product={p} onEdit={startEdit} onRemove={remove} removingId={removingId} compact={compactMode} />
-            ))}
-          </section>
-        </>
+      {showOnlyOutOfStock && (
+        <div className="text-sm text-slate-600">Filtro: <strong>Somente sem estoque</strong></div>
       )}
 
-      {/* Lista desktop (tabela) */}
-      <section className="card overflow-hidden hidden md:block">
-        <div className="overflow-auto max-h-[58dvh]">
-          <div className="min-w-full">
-          <table className="w-full text-sm [display:table] table-auto">
-            <thead className="sticky top-0 backdrop-blur theme-card-bg">
-              <tr className="[&>th]:p-3 [&>th]:text-left [&>th]:font-semibold text-slate-700 dark:text-slate-200">
-                <th>Imagem</th>
-                <th>Nome</th>
-                <th>Preço</th>
-                <th>Estoque</th>
-                <th className="hidden lg:table-cell">Atualizado</th>
-                <th>Descrição</th>
-                <th className="text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="[&>tr]:border-t [&>tr]:border-black/5 dark:[&>tr]:border-white/10">
-              {/* estados */}
-              {loading &&
-                Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td className="p-3">
-                      <div className="h-10 w-10 rounded" style={{ background: 'var(--color-border)' }} />
-                    </td>
-                    <td className="p-3">
-                      <div className="h-4 w-40 rounded" style={{ background: 'var(--color-border)' }} />
-                    </td>
-                    <td className="p-3">
-                      <div className="h-4 w-20 rounded" style={{ background: 'var(--color-border)' }} />
-                    </td>
-                    <td className="p-3">
-                      <div className="h-4 w-20 rounded" style={{ background: 'var(--color-border)' }} />
-                    </td>
-                    <td className="hidden p-3 lg:table-cell">
-                      <div className="h-4 w-40 rounded" style={{ background: 'var(--color-border)' }} />
-                    </td>
-                    <td className="p-3">
-                      <div className="ml-auto h-8 w-28 rounded" style={{ background: 'var(--color-border)' }} />
-                    </td>
-                  </tr>
-                ))}
-
-              {!loading && items.length === 0 && (
-                <tr>
-                  <td className="p-6 text-center text-slate-600 dark:text-slate-300" colSpan={7}>
-                    Nenhum produto encontrado.
-                  </td>
-                </tr>
-              )}
-
-              {!loading &&
-                filteredItems.map((p) => (
-                  <ProductTableRow key={p.id} product={p} onEdit={startEdit} onRemove={remove} removingId={removingId} onSavePrice={handleSavePrice} onSaveStock={handleSaveStock} />
-                ))}
-            </tbody>
-          </table>
-          </div>
+      <section className="card overflow-hidden">
+        <div className="max-h-[68dvh] overflow-y-auto p-3 sm:p-4">
+          {loading && <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-28 animate-pulse rounded-lg bg-black/5 dark:bg-white/5" />)}</div>}
+          {!loading && filteredItems.length === 0 && <p className="p-6 text-center text-slate-600 dark:text-slate-300">Nenhum produto encontrado.</p>}
+          {!loading && filteredItems.length > 0 && <div className="space-y-3">
+            {filteredItems.map((p) => (
+              <ProductAdminCard key={p.id} product={p} onEdit={startEdit} onRemove={remove} removingId={removingId} />
+            ))}
+          </div>}
         </div>
       </section>
 
