@@ -128,7 +128,7 @@ export async function checkout(req: Request, res: Response) {
       message: 'Pedido finalizado com sucesso!',
       order,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro no checkout:', error);
     return res.status(500).json({ message: 'Erro interno ao processar o checkout.' });
   }
@@ -155,7 +155,7 @@ export async function listOrders(req: Request, res: Response) {
     });
 
     return res.json(orders);
-  } catch (error) {
+  } catch {
     return res.status(500).json({ message: 'Erro ao buscar pedidos.' });
   }
 }
@@ -186,7 +186,7 @@ export async function getOrder(req: Request, res: Response) {
     }
 
     return res.json(order);
-  } catch (error) {
+  } catch {
     return res.status(500).json({ message: 'Erro ao buscar detalhes do pedido.' });
   }
 }

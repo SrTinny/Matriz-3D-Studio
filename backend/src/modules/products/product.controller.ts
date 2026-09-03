@@ -15,6 +15,14 @@ function buildUploadedImageDataUrl(file: Express.Multer.File) {
   return `data:${mimeType};base64,${base64}`
 }
 
+async function validateUploadedImage(file: Express.Multer.File | undefined) {
+  if (!file) return true
+
+  const { fileTypeFromBuffer } = await import('file-type')
+  const detected = await fileTypeFromBuffer(file.buffer)
+  return detected?.mime === 'image/jpeg' || detected?.mime === 'image/png' || detected?.mime === 'image/webp' || detected?.mime === 'image/gif'
+}
+
 /* ========= helpers ========= */
 function slugify(s: string) {
   return s
@@ -359,6 +367,9 @@ export async function createProduct(req: Request, res: Response) {
 
   const data = parsed.data
   const uploadedImageUrl = req.file ? buildUploadedImageDataUrl(req.file) : undefined
+  if (!(await validateUploadedImage(req.file))) {
+    return res.status(400).json({ message: 'Arquivo de imagem inválido.' })
+  }
 
   try {
     // suporta múltiplas categorias e mantém categoryId para compatibilidade
@@ -431,6 +442,9 @@ export async function updateProduct(req: Request, res: Response) {
   }
   const patch = parsed.data
   const uploadedImageUrl = req.file ? buildUploadedImageDataUrl(req.file) : undefined
+  if (!(await validateUploadedImage(req.file))) {
+    return res.status(400).json({ message: 'Arquivo de imagem inválido.' })
+  }
 
   // aplica somente campos presentes
   const data: {

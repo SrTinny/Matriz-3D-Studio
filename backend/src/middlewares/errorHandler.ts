@@ -14,6 +14,7 @@ export function errorHandler(
 ) {
   let status = err.status ?? 500;
   let message = err.message || 'Internal Server Error';
+  const isProduction = process.env.NODE_ENV === 'production';
 
   // Prisma connection/auth errors: return a clearer actionable message in local dev.
   if (
@@ -31,7 +32,11 @@ export function errorHandler(
     message = 'Banco indisponível por cota de transferência excedida no provedor. Aguarde o reset da cota ou faça upgrade do plano do banco.';
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (isProduction && status >= 500) {
+    message = 'Erro interno do servidor.';
+  }
+
+  if (!isProduction) {
     console.error('[ERROR]', err);
   }
 

@@ -3,6 +3,7 @@ import express from 'express'
 import cookieParser from 'cookie-parser'
 import cors, { CorsOptions } from 'cors'
 import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
 import productRoutes from './modules/products/product.routes'
 import categoryRoutes from './modules/categories/category.routes'
 import authRoutes from './modules/auth/auth.routes'
@@ -21,7 +22,7 @@ if (env.nodeEnv === 'production') {
 
 app.disable('x-powered-by')
 
-app.use(express.json())
+app.use(express.json({ limit: '256kb' }))
 app.use(cookieParser())
 app.use(helmet({ crossOriginResourcePolicy: false }))
 
@@ -56,13 +57,19 @@ const envAllowed = [
 ]
 const allowedOrigins = [...new Set([...staticAllowed, ...envAllowed])]
 
-const vercelPreviewRe = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i
+const apiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Muitas requisições. Tente novamente mais tarde.' },
+})
 
 const corsOptions: CorsOptions = {
   origin(origin, cb) {
     if (!origin) return cb(null, true) // curl/healthchecks
     const normalizedOrigin = normalizeOrigin(origin)
-    if (allowedOrigins.includes(normalizedOrigin) || vercelPreviewRe.test(normalizedOrigin)) {
+    if (allowedOrigins.includes(normalizedOrigin)) {
       return cb(null, true)
     }
     return cb(new Error(`Origin not allowed by CORS: ${origin}`))
@@ -74,6 +81,7 @@ const corsOptions: CorsOptions = {
 
 // ✅ Aplica CORS globalmente (inclui preflight nas rotas)
 app.use(cors(corsOptions))
+app.use(apiRateLimiter)
 
 /* Rotas públicas */
 app.use('/auth', authRoutes)
