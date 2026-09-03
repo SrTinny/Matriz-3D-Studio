@@ -7,12 +7,41 @@ import { hydrateSession } from '@/lib/auth';
 import type { AuthUser } from '@/lib/auth-store';
 import { toast } from 'sonner';
 
-type Product = { id: string; name: string; price: number };
+type Product = { id: string; name: string; price: number; fileUrl?: string | null };
 type Seller = { id: string; name: string; email: string };
-type Sale = { id: string; total: number; amountPaid: number; paymentMethod: string; status: string; dueDate?: string | null; customerName?: string | null; createdAt: string; seller: Seller; items: Array<{ quantity: number; productName: string; product?: { name: string } | null }> };
+type Sale = {
+  id: string;
+  total: number;
+  amountPaid: number;
+  paymentMethod: string;
+  status: string;
+  dueDate?: string | null;
+  customerName?: string | null;
+  fileUrl?: string | null;
+  createdAt: string;
+  seller: Seller;
+  items: Array<{
+    quantity: number;
+    productName: string;
+    fileUrl?: string | null;
+    product?: { name: string; fileUrl?: string | null } | null;
+  }>;
+};
 type Summary = { year: number; total: number; count: number; pending: number; byMonth: Array<{ month: number; total: number; count: number }> };
 
-const formatBRL = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+const formatBRL = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined) return 'R$ 0,00';
+  const num = typeof value === 'string' ? Number(value.replace(',', '.')) : Number(value);
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number.isFinite(num) ? num : 0);
+};
+
+const parseNum = (val: string | number | undefined | null) => {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  const parsed = Number(String(val).replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const paymentLabels: Record<string, string> = { PIX: 'Pix', CARD: 'Cartão', CASH: 'Dinheiro', TRANSFER: 'Transferência', OTHER: 'Outro' };
 const statusLabels: Record<string, string> = { PENDING: 'Pendente', IN_PROGRESS: 'Em produção', COMPLETED: 'Concluída', CANCELLED: 'Cancelada' };
 const statusClasses: Record<string, string> = {
@@ -33,7 +62,21 @@ export default function SalesClient() {
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ productId: '', productName: '', quantity: '1', total: '', amountPaid: '0', paymentMethod: 'PIX', sellerId: '', customerName: '', customerContact: '', status: 'PENDING', dueDate: '', notes: '' });
+  const [form, setForm] = useState({
+    productId: '',
+    productName: '',
+    quantity: '1',
+    total: '',
+    amountPaid: '0',
+    paymentMethod: 'PIX',
+    sellerId: '',
+    customerName: '',
+    customerContact: '',
+    status: 'PENDING',
+    dueDate: '',
+    notes: '',
+    fileUrl: '',
+  });
 
   const selectedProduct = useMemo(() => products.find((product) => product.id === form.productId), [products, form.productId]);
 
@@ -77,9 +120,33 @@ export default function SalesClient() {
     if (!form.productName.trim() || !form.total) { toast.error('Informe o nome do produto e o valor da venda.'); return; }
     try {
       setSaving(true);
-      await api.post('/sales', { ...form, productId: form.productId || null, productName: form.productName.trim(), quantity: Number(form.quantity), total: Number(form.total), amountPaid: Number(form.amountPaid), dueDate: form.dueDate ? new Date(`${form.dueDate}T00:00:00.000Z`).toISOString() : null });
+      const totalNum = parseNum(form.total);
+      const amountPaidNum = parseNum(form.amountPaid);
+
+      await api.post('/sales', {
+        ...form,
+        productId: form.productId || null,
+        productName: form.productName.trim(),
+        quantity: Math.max(1, parseNum(form.quantity)),
+        total: totalNum,
+        amountPaid: amountPaidNum,
+        fileUrl: form.fileUrl.trim() || null,
+        dueDate: form.dueDate ? new Date(`${form.dueDate}T00:00:00.000Z`).toISOString() : null,
+      });
       toast.success('Venda cadastrada.');
-      setForm((current) => ({ ...current, productId: '', productName: '', quantity: '1', total: '', amountPaid: '0', customerName: '', customerContact: '', dueDate: '', notes: '' }));
+      setForm((current) => ({
+        ...current,
+        productId: '',
+        productName: '',
+        quantity: '1',
+        total: '',
+        amountPaid: '0',
+        customerName: '',
+        customerContact: '',
+        dueDate: '',
+        notes: '',
+        fileUrl: '',
+      }));
       await loadData();
     } catch (error) {
       const message = axios.isAxiosError(error) ? (error.response?.data as { message?: string } | undefined)?.message : undefined;
@@ -110,22 +177,149 @@ export default function SalesClient() {
       <section className="card p-4 sm:p-6">
         <h2 className="text-lg font-semibold">Cadastrar nova venda</h2>
         <form onSubmit={createSale} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="space-y-1 text-sm"><span>Produto</span><input className="input-base" list="sale-products" value={form.productName} onChange={(event) => { const name = event.target.value; const product = products.find((item) => item.name.toLowerCase() === name.toLowerCase()); setForm((current) => ({ ...current, productName: name, productId: product?.id ?? '', total: product ? String(product.price) : current.total })); }} placeholder="Digite o nome do produto" required /><datalist id="sale-products">{products.map((product) => <option key={product.id} value={product.name}>{formatBRL(product.price)}</option>)}</datalist></label>
+          <label className="space-y-1 text-sm">
+            <span>Produto</span>
+            <input
+              className="input-base"
+              list="sale-products"
+              value={form.productName}
+              onChange={(event) => {
+                const name = event.target.value;
+                const product = products.find((item) => item.name.toLowerCase() === name.toLowerCase());
+                setForm((current) => ({
+                  ...current,
+                  productName: name,
+                  productId: product?.id ?? '',
+                  total: product ? String(product.price) : current.total,
+                  fileUrl: product?.fileUrl ? product.fileUrl : current.fileUrl,
+                }));
+              }}
+              placeholder="Digite o nome do produto"
+              required
+            />
+            <datalist id="sale-products">
+              {products.map((product) => (
+                <option key={product.id} value={product.name}>
+                  {formatBRL(product.price)}
+                </option>
+              ))}
+            </datalist>
+          </label>
           <label className="space-y-1 text-sm"><span>Quantidade</span><input className="input-base" type="number" min="1" value={form.quantity} onChange={(event) => updateForm('quantity', event.target.value)} /></label>
-          <label className="space-y-1 text-sm"><span>Valor total (R$)</span><input className="input-base" type="number" min="0.01" step="0.01" value={form.total} onChange={(event) => updateForm('total', event.target.value)} required /></label>
-          <label className="space-y-1 text-sm"><span>Valor já pago (R$)</span><input className="input-base" type="number" min="0" step="0.01" value={form.amountPaid} onChange={(event) => updateForm('amountPaid', event.target.value)} /></label>
+          <label className="space-y-1 text-sm"><span>Valor total (R$)</span><input className="input-base" type="text" value={form.total} onChange={(event) => updateForm('total', event.target.value)} placeholder="0.00" required /></label>
+          <label className="space-y-1 text-sm"><span>Valor já pago (R$)</span><input className="input-base" type="text" value={form.amountPaid} onChange={(event) => updateForm('amountPaid', event.target.value)} placeholder="0.00" /></label>
           <label className="space-y-1 text-sm"><span>Forma de pagamento</span><select className="input-base" value={form.paymentMethod} onChange={(event) => updateForm('paymentMethod', event.target.value)}>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label className="space-y-1 text-sm"><span>Vendedor</span><select className="input-base" value={form.sellerId} onChange={(event) => updateForm('sellerId', event.target.value)}>{sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}</select></label>
           <label className="space-y-1 text-sm"><span>Status</span><select className="input-base" value={form.status} onChange={(event) => updateForm('status', event.target.value)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label className="space-y-1 text-sm"><span>Cliente</span><input className="input-base" value={form.customerName} onChange={(event) => updateForm('customerName', event.target.value)} placeholder="Nome (opcional)" /></label>
           <label className="space-y-1 text-sm"><span>Contato do cliente</span><input className="input-base" value={form.customerContact} onChange={(event) => updateForm('customerContact', event.target.value)} placeholder="Telefone ou e-mail" /></label>
           <label className="space-y-1 text-sm"><span>Prazo de entrega</span><input className="input-base" type="date" value={form.dueDate} onChange={(event) => updateForm('dueDate', event.target.value)} /></label>
+
+          <label className="space-y-1 text-sm sm:col-span-2 lg:col-span-2">
+            <span>Link do arquivo / produto</span>
+            <input
+              className="input-base"
+              type="url"
+              value={form.fileUrl}
+              onChange={(event) => updateForm('fileUrl', event.target.value)}
+              placeholder="https://drive.google.com/... ou link para download"
+            />
+          </label>
+
           <label className="space-y-1 text-sm sm:col-span-2 lg:col-span-3"><span>Observações</span><textarea className="input-base min-h-20" value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} placeholder="Detalhes da produção, entrega ou pagamento" /></label>
           <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-3"><button className="btn btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Cadastrar venda'}</button>{selectedProduct && <span className="text-sm text-slate-500">Preço sugerido: {formatBRL(selectedProduct.price)}</span>}</div>
         </form>
       </section>
 
-      <section className="card overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="text-lg font-semibold">Histórico de vendas</h2><p className="text-sm text-slate-500">Acompanhe pedidos concluídos e pendentes.</p></div><div className="flex gap-2"><select className="input-base w-auto" value={year} onChange={(event) => setYear(Number(event.target.value))}><option>{year - 1}</option><option>{year}</option><option>{year + 1}</option></select><select className="input-base w-auto" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div></div><div className="overflow-x-auto"><table className="w-full min-w-[860px] text-left text-sm"><thead className="bg-slate-50"><tr><th className="p-3">Data</th><th className="p-3">Produto</th><th className="p-3">Cliente</th><th className="p-3">Vendedor</th><th className="p-3">Pagamento</th><th className="p-3">Total</th><th className="p-3">Valor pago</th><th className="p-3">Prazo / status</th></tr></thead><tbody>{loading ? <tr><td className="p-6" colSpan={8}>Carregando vendas...</td></tr> : sales.length === 0 ? <tr><td className="p-6 text-center text-slate-500" colSpan={8}>Nenhuma venda cadastrada.</td></tr> : sales.map((sale) => <tr key={sale.id} className="border-t"><td className="p-3">{new Date(sale.createdAt).toLocaleDateString('pt-BR')}</td><td className="p-3">{sale.items.map((item) => `${item.quantity}x ${item.productName || item.product?.name || 'Produto'}`).join(', ')}</td><td className="p-3">{sale.customerName || 'Não informado'}</td><td className="p-3">{sale.seller.name}</td><td className="p-3">{paymentLabels[sale.paymentMethod] ?? sale.paymentMethod}</td><td className="p-3 font-semibold">{formatBRL(sale.total)}</td><td className="p-3 font-semibold text-emerald-700">{formatBRL(sale.amountPaid)}</td><td className="p-3"><div className="flex items-center gap-2"><span className="whitespace-nowrap">{sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</span><select className={`input-base min-w-32 font-semibold ${statusClasses[sale.status] ?? ''}`} value={sale.status} onChange={(event) => void changeStatus(sale.id, event.target.value)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div></td></tr>)}</tbody></table></div></section>
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+          <div><h2 className="text-lg font-semibold">Histórico de vendas</h2><p className="text-sm text-slate-500">Acompanhe pedidos concluídos e pendentes.</p></div>
+          <div className="flex gap-2">
+            <select className="input-base w-auto" value={year} onChange={(event) => setYear(Number(event.target.value))}>
+              <option>{year - 1}</option>
+              <option>{year}</option>
+              <option>{year + 1}</option>
+            </select>
+            <select className="input-base w-auto" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="">Todos os status</option>
+              {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] text-left text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="p-3">Data</th>
+                <th className="p-3">Produto</th>
+                <th className="p-3">Link do arquivo</th>
+                <th className="p-3">Cliente</th>
+                <th className="p-3">Vendedor</th>
+                <th className="p-3">Pagamento</th>
+                <th className="p-3">Total</th>
+                <th className="p-3">Valor pago</th>
+                <th className="p-3">Prazo / status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td className="p-6" colSpan={9}>Carregando vendas...</td></tr>
+              ) : sales.length === 0 ? (
+                <tr><td className="p-6 text-center text-slate-500" colSpan={9}>Nenhuma venda cadastrada.</td></tr>
+              ) : (
+                sales.map((sale) => {
+                  const rawLink = sale.fileUrl || sale.items.find((i) => i.fileUrl || i.product?.fileUrl)?.fileUrl || sale.items.find((i) => i.product?.fileUrl)?.product?.fileUrl;
+                  const linkUrl = rawLink ? (rawLink.startsWith('http://') || rawLink.startsWith('https://') ? rawLink : `https://${rawLink}`) : null;
+
+                  return (
+                    <tr key={sale.id} className="border-t">
+                      <td className="p-3">{new Date(sale.createdAt).toLocaleDateString('pt-BR')}</td>
+                      <td className="p-3">{sale.items.map((item) => `${item.quantity}x ${item.productName || item.product?.name || 'Produto'}`).join(', ')}</td>
+                      <td className="p-3">
+                        {linkUrl ? (
+                          <a
+                            href={linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 font-medium text-brand hover:underline"
+                            title={linkUrl}
+                          >
+                            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            <span>Abrir link</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="p-3">{sale.customerName || 'Não informado'}</td>
+                      <td className="p-3">{sale.seller.name}</td>
+                      <td className="p-3">{paymentLabels[sale.paymentMethod] ?? sale.paymentMethod}</td>
+                      <td className="p-3 font-semibold">{formatBRL(sale.total)}</td>
+                      <td className="p-3 font-semibold text-emerald-700">{formatBRL(sale.amountPaid)}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <span className="whitespace-nowrap">{sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
+                          <select
+                            className={`input-base min-w-32 font-semibold ${statusClasses[sale.status] ?? ''}`}
+                            value={sale.status}
+                            onChange={(event) => void changeStatus(sale.id, event.target.value)}
+                          >
+                            {Object.entries(statusLabels).map(([value, label]) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   );
 }

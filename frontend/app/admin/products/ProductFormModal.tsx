@@ -31,6 +31,7 @@ const productSchema = z.object({
   stock: z.coerce.number().int("Estoque deve ser inteiro").nonnegative("Estoque inválido"),
   tag: z.enum(["PROMOCAO", "NOVO"]).optional(),
   categoryName: z.string().optional().nullable(),
+  fileUrl: z.preprocess(emptyToUndefined, z.string().optional()),
 });
 type ProductFormData = z.infer<typeof productSchema>;
 
@@ -51,7 +52,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting, dirtyFields } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as unknown as Resolver<ProductFormData>,
-    defaultValues: { name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, heightCm: undefined, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" },
+    defaultValues: { name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, heightCm: undefined, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "", fileUrl: "" },
   });
 
   const weightGrams = watch('weightGrams');
@@ -123,6 +124,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
         stock: editingProduct.stock,
         tag: editingProduct.tag === 'Promoção' ? 'PROMOCAO' : editingProduct.tag === 'Novo' ? 'NOVO' : undefined,
         categoryName: editingProduct.categoryNames?.[0] ?? editingProduct.category?.name ?? null,
+        fileUrl: editingProduct.fileUrl ?? "",
       });
       setPreviewUrl(editingProduct.imageUrl ?? "");
       setSelectedImage(null);
@@ -134,7 +136,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
       );
       setNewCategoryInput("");
     } else {
-      reset({ name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, heightCm: undefined, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "" });
+      reset({ name: "", description: "", price: 0, wholesalePrice: 0, wholesaleMinQuantity: 1, heightCm: undefined, weightGrams: 0, printHours: 0, wholesaleEnabled: false, stock: 0, categoryName: "", fileUrl: "" });
       setPreviewUrl("");
       setSelectedImage(null);
       setSelectedCategories([]);
@@ -212,6 +214,7 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
       }
       payload.append('stock', String(data.stock));
       if (data.description?.trim()) payload.append('description', data.description.trim());
+      if (data.fileUrl?.trim()) payload.append('fileUrl', data.fileUrl.trim());
       if (data.tag) payload.append('tag', data.tag);
       payload.append('categoryNames', JSON.stringify(categoryNames));
       payload.append('categoryName', categoryNames[0] ?? '');
@@ -377,6 +380,12 @@ export default function ProductFormModal({ open, onClose, onSaveSuccess, editing
               <label className="mb-1 block text-sm" htmlFor="description">Descrição</label>
               <textarea id="description" className="input-base" rows={3} {...register("description")} />
               {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm" htmlFor="fileUrl">Link do arquivo 3D (Drive, Mega, STL)</label>
+              <input id="fileUrl" className="input-base" type="url" placeholder="https://drive.google.com/file/d/..." {...register("fileUrl")} />
+              {errors.fileUrl && <p className="mt-1 text-xs text-red-600">{errors.fileUrl.message}</p>}
             </div>
 
             <div className="sm:col-span-2">

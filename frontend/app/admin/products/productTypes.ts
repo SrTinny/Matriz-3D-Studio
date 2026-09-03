@@ -18,6 +18,7 @@ export type AdminProduct = {
   createdAt?: string;
   updatedAt?: string;
   imageUrl?: string | null;
+  fileUrl?: string | null;
   tag?: string | null;
   category?: AdminCategory | null;
   categoryName?: string | null;

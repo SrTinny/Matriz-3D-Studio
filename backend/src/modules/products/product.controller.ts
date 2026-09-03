@@ -18,9 +18,10 @@ function buildUploadedImageDataUrl(file: Express.Multer.File) {
 async function validateUploadedImage(file: Express.Multer.File | undefined) {
   if (!file) return true
 
-  const { fileTypeFromBuffer } = await import('file-type')
-  const detected = await fileTypeFromBuffer(file.buffer)
-  return detected?.mime === 'image/jpeg' || detected?.mime === 'image/png' || detected?.mime === 'image/webp' || detected?.mime === 'image/gif'
+  const fileTypeModule = await import('file-type') as any
+  const detector = fileTypeModule.fileTypeFromBuffer || fileTypeModule.fromBuffer || fileTypeModule.default?.fileTypeFromBuffer || fileTypeModule.default?.fromBuffer
+  const detected = detector ? await detector(file.buffer) : null
+  return !detected || detected.mime === 'image/jpeg' || detected.mime === 'image/png' || detected.mime === 'image/webp' || detected.mime === 'image/gif'
 }
 
 /* ========= helpers ========= */
@@ -114,6 +115,7 @@ const productSelect = {
   wholesaleEnabled: true,
   stock: true,
   imageUrl: true,
+  fileUrl: true,
   tag: true,
   categoryId: true,
   category: { select: { id: true, name: true } },
@@ -135,8 +137,8 @@ const createProductSchema = z.object({
   printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().default(0)),
   wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().default(false)),
   stock: z.coerce.number().int().nonnegative().default(0),
-  imageUrl: z.preprocess(emptyToUndefined, z.string().url('URL inválida').optional())
-  ,
+  imageUrl: z.preprocess(emptyToUndefined, z.string().url('URL inválida').optional()),
+  fileUrl: z.preprocess(emptyToUndefined, z.string().optional()),
   tag: z.enum(['PROMOCAO', 'NOVO']).optional(),
   categoryId: z.string().uuid().optional().nullable(),
   categoryName: z.string().optional().nullable(),
@@ -155,8 +157,8 @@ const updateProductSchema = z.object({
   printHours: z.preprocess(numberOrUndefined, z.coerce.number().finite().nonnegative().optional()),
   wholesaleEnabled: z.preprocess(parseBooleanLike, z.boolean().optional()),
   stock: z.coerce.number().int().nonnegative().optional(),
-  imageUrl: z.preprocess(emptyToUndefined, z.string().url('URL inválida').nullable().optional())
-  ,
+  imageUrl: z.preprocess(emptyToUndefined, z.string().url('URL inválida').nullable().optional()),
+  fileUrl: z.preprocess(emptyToUndefined, z.string().nullable().optional()),
   tag: z.enum(['PROMOCAO', 'NOVO']).nullable().optional(),
   categoryId: z.string().uuid().nullable().optional(),
   categoryName: z.string().nullable().optional(),

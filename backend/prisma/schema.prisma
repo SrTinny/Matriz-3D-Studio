@@ -101,6 +101,7 @@ model Product {
   wholesaleEnabled     Boolean     @default(false)
   stock                Int         @default(0)
   imageUrl             String?
+  fileUrl              String?
   tag                  ProductTag?
   categoryId           String?
   category             Category?   @relation(fields: [categoryId], references: [id])
@@ -133,6 +134,7 @@ model Sale {
   dueDate         DateTime?
   completedAt     DateTime?
   notes           String?
+  fileUrl         String?
   items           SaleItem[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -152,6 +154,7 @@ model SaleItem {
   productName String
   quantity    Int      @default(1)
   unitPrice   Float
+  fileUrl     String?
 
   @@index([saleId])
   @@index([productId])

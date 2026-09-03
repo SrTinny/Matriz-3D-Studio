@@ -18,6 +18,7 @@ const createSaleSchema = z.object({
   status: saleStatusSchema.optional().default('PENDING'),
   dueDate: z.string().datetime().optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
+  fileUrl: z.string().trim().max(2000).optional().nullable(),
 })
 
 const updateStatusSchema = z.object({ status: saleStatusSchema })
@@ -30,7 +31,7 @@ function requireUser(req: Request): asserts req is AuthenticatedRequest {
 
 const saleInclude = {
   seller: { select: { id: true, name: true, email: true } },
-  items: { include: { product: { select: { id: true, name: true, slug: true } } } },
+  items: { include: { product: { select: { id: true, name: true, slug: true, fileUrl: true } } } },
 } as const
 
 export async function listSellers(_req: Request, res: Response) {
@@ -49,10 +50,12 @@ export async function createSale(req: Request, res: Response) {
 
   const data = parsed.data
   const [product, seller] = await Promise.all([
-    data.productId ? prisma.product.findUnique({ where: { id: data.productId }, select: { id: true, name: true } }) : Promise.resolve(null),
+    data.productId ? prisma.product.findUnique({ where: { id: data.productId }, select: { id: true, name: true, fileUrl: true } }) : Promise.resolve(null),
     prisma.user.findUnique({ where: { id: data.sellerId ?? req.user.id }, select: { id: true, role: true, isActive: true } }),
   ])
   if (!seller || seller.role !== 'ADMIN') return res.status(400).json({ message: 'Vendedor inválido.' })
+
+  const finalFileUrl = data.fileUrl || product?.fileUrl || null
 
   const sale = await prisma.sale.create({
     data: {
@@ -62,11 +65,12 @@ export async function createSale(req: Request, res: Response) {
       paymentMethod: data.paymentMethod,
       status: data.status,
       total: data.total,
-      amountPaid: Math.min(data.amountPaid, data.total),
+      amountPaid: Math.min(data.amountPaid ?? 0, data.total),
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       completedAt: data.status === 'COMPLETED' ? new Date() : null,
       notes: data.notes || null,
-      items: { create: { productId: product?.id ?? null, productName: data.productName, quantity: data.quantity, unitPrice: data.total / data.quantity } },
+      fileUrl: finalFileUrl,
+      items: { create: { productId: product?.id ?? null, productName: data.productName, quantity: data.quantity, unitPrice: data.total / data.quantity, fileUrl: finalFileUrl } },
     },
     include: saleInclude,
   })
