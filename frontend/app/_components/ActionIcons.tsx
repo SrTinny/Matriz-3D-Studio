@@ -158,7 +158,7 @@ export default function ActionIcons({ authed, admin, theme, toggleTheme, onLogou
             <Link
               href="/notifications"
               role="menuitem"
-              className="rounded-md px-3 py-2 text-sm hover:bg-[var(--color-hover)]"
+              className="hidden rounded-md px-3 py-2 text-sm hover:bg-[var(--color-hover)]"
               onClick={() => setMenuOpen(false)}
             >
               Notificações
@@ -166,7 +166,7 @@ export default function ActionIcons({ authed, admin, theme, toggleTheme, onLogou
             <Link
               href="/chat"
               role="menuitem"
-              className="rounded-md px-3 py-2 text-sm hover:bg-[var(--color-hover)]"
+              className="hidden rounded-md px-3 py-2 text-sm hover:bg-[var(--color-hover)]"
               onClick={() => setMenuOpen(false)}
             >
               Chat

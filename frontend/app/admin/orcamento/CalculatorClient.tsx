@@ -32,6 +32,8 @@ type Calculation = {
   rows: Array<{ percent: number; price: number; gain: number; }>; 
 };
 
+type CategoryOption = { id: string; name: string };
+
 export default function CalculatorClient() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -48,6 +50,8 @@ export default function CalculatorClient() {
   const [productName, setProductName] = useState('Produto calculado');
   const [productDescription, setProductDescription] = useState('');
   const [productCategory, setProductCategory] = useState('');
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [finalPrice, setFinalPrice] = useState('');
   const [productStock, setProductStock] = useState(1);
   const [savingProduct, setSavingProduct] = useState(false);
 
@@ -70,6 +74,12 @@ export default function CalculatorClient() {
       }
 
       setReady(true);
+      try {
+        const response = await api.get<CategoryOption[]>('/categories');
+        if (mounted) setCategories(response.data ?? []);
+      } catch {
+        if (mounted) setCategories([]);
+      }
     })();
 
     return () => {
@@ -123,6 +133,10 @@ export default function CalculatorClient() {
 
   const selectedRow = calculation.rows.find((row) => row.percent === selectedProfit) ?? calculation.rows[0];
   const targetPrice = selectedRow?.price ?? calculation.productionFinalCost;
+
+  useEffect(() => {
+    setFinalPrice(String(targetPrice));
+  }, [targetPrice]);
 
   const summaryText = useMemo(() => {
     const totalHours = printHours + printMinutes / 60;
@@ -180,7 +194,7 @@ export default function CalculatorClient() {
       const payload = {
         name: productName.trim(),
         description: productDescription.trim() || undefined,
-        price: Number(targetPrice) || 0,
+        price: Number(finalPrice.replace(',', '.')) || 0,
         stock: Math.max(1, Number(productStock) || 1),
         weightGrams: Number(weightGrams) || 0,
         printHours: Number(printHours + printMinutes / 60) || 0,
@@ -359,7 +373,10 @@ export default function CalculatorClient() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-sm text-slate-600 dark:text-slate-300">
                   <span className="mb-1 block font-medium">Categoria</span>
-                  <input className="input-base" value={productCategory} onChange={(e) => setProductCategory(e.target.value)} placeholder="Ex.: Figurino" />
+                  <input className="input-base" list="calculator-categories" value={productCategory} onChange={(e) => setProductCategory(e.target.value)} placeholder="Escolha ou escreva uma categoria" />
+                  <datalist id="calculator-categories">
+                    {categories.map((category) => <option key={category.id} value={category.name} />)}
+                  </datalist>
                 </label>
 
                 <label className="block text-sm text-slate-600 dark:text-slate-300">
@@ -369,9 +386,12 @@ export default function CalculatorClient() {
               </div>
 
               <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-slate-50/50 dark:bg-slate-900/20 p-3 text-sm text-slate-600 dark:text-slate-300">
-                <p className="font-medium text-slate-700 dark:text-slate-200">Preço final para cadastro</p>
-                <p className="mt-1 text-lg font-bold text-brand">{formatBRL(targetPrice)}</p>
-                <p className="text-xs mt-1">Lucro selecionado: {selectedProfit}%</p>
+                <label className="block font-medium text-slate-700 dark:text-slate-200" htmlFor="calculator-final-price">Preço final para cadastro (editável)</label>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-sm text-slate-500">R$</span>
+                  <input id="calculator-final-price" className="input-base font-bold text-brand" type="number" min={0} step="0.01" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} />
+                </div>
+                <p className="text-xs mt-1">Sugestão atual: {formatBRL(targetPrice)} · Lucro selecionado: {selectedProfit}%</p>
               </div>
 
               <button type="button" onClick={createProduct} disabled={savingProduct} className="btn btn-primary w-full">
